@@ -1,0 +1,2181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>ClasseAzy — organize suas entregas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   TOKENS — cor, tipografia, forma
+   Paleta "tinta noturna": azul-tinta profundo + violeta elétrico + ciano,
+   pensada para uma ferramenta de estudo que passa a noite toda aberta.
+   ===================================================================== */
+:root{
+  --ink:#12142B; --ink-soft:#585C82; --ink-faint:#9296B8;
+  --cloud:#F1F2FB; --cloud-2:#E7E8F7; --paper:#FFFFFF; --line:#E4E5F3;
+  --accent:#6C5CE7; --accent-dark:#5642D6; --accent-soft:#EEECFD; --accent-soft-2:#E1DCFB;
+  --cyan:#22D3EE; --cyan-soft:#E4FBFF;
+  --amber:#F5A623; --amber-soft:#FDF1DC; --amber-ink:#8A5A00;
+  --mint:#1FAE7A; --mint-soft:#E4F7EF;
+  --coral:#EF5D5D; --coral-soft:#FCE9E9;
+  --radius:16px; --radius-sm:11px;
+  --shadow-lg:0 30px 70px -25px rgba(10,12,30,.45);
+  --shadow-sm:0 10px 26px -14px rgba(28,35,64,.22);
+  --ease:cubic-bezier(.16,1,.3,1);
+  --gap-card:10px; --pad-card:14px 16px; --font-base:14.5px;
+  --motion-1:.5s; --motion-2:.25s; --motion-3:.15s;
+}
+[data-theme="dark"]{
+  --ink:#EEEFFC; --ink-soft:#AEB2DA; --ink-faint:#71759E;
+  --cloud:#0B0C1E; --cloud-2:#14163050; --paper:#161831; --line:#2A2D52;
+  --accent-soft:#241F4A; --accent-soft-2:#2D2760;
+  --amber-soft:#3A2C0E; --amber-ink:#F3B34E;
+  --mint-soft:#0F2E22; --coral-soft:#3A1414; --cyan-soft:#0B2A31;
+  --shadow-lg:0 30px 70px -25px rgba(0,0,0,.7);
+  --shadow-sm:0 10px 26px -14px rgba(0,0,0,.5);
+}
+[data-density="compact"]{ --gap-card:6px; --pad-card:10px 14px; --font-base:13.5px; }
+.reduce-motion *{ animation-duration:.001s !important; transition-duration:.001s !important; }
+
+*{box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{margin:0;background:var(--cloud);color:var(--ink);font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;
+  transition:background var(--motion-1) var(--ease), color var(--motion-1) var(--ease);}
+.mono{font-family:'IBM Plex Mono',monospace;}
+.display{font-family:'Space Grotesk',sans-serif;}
+button{font-family:inherit;}
+a{color:inherit;}
+::selection{background:var(--accent-soft);}
+::-webkit-scrollbar{width:8px;height:8px;}
+::-webkit-scrollbar-thumb{background:rgba(120,124,180,.35);border-radius:20px;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.icon{display:inline-block;vertical-align:middle;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.icon.filled{fill:currentColor;stroke:none;}
+svg.sprite-defs{position:absolute;width:0;height:0;overflow:hidden;}
+
+/* ================= CONNECT SCREEN ================= */
+#connectScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+  position:relative;overflow:hidden;
+  background:radial-gradient(circle at 25% 20%,#262B58 0%,#0B0D1F 60%);}
+#bgCanvas{position:absolute;inset:0;width:100%;height:100%;z-index:0;opacity:0;transition:opacity 1.2s var(--ease);}
+#bgCanvas.ready{opacity:1;}
+.connect-card{position:relative;z-index:2;background:rgba(255,255,255,.97);backdrop-filter:blur(8px);
+  border-radius:26px;padding:44px 40px;max-width:410px;width:100%;
+  box-shadow:var(--shadow-lg);text-align:center;
+  animation:cardIn .8s var(--ease) both;}
+@keyframes cardIn{from{opacity:0;transform:translateY(24px) scale(.97);}to{opacity:1;transform:translateY(0) scale(1);}}
+.mark3d{width:64px;height:64px;margin:0 auto 18px;border-radius:18px;overflow:hidden;position:relative;
+  background:linear-gradient(135deg,var(--accent),#8A7FF2);box-shadow:0 14px 30px -10px rgba(108,92,231,.55);}
+.mark3d canvas{width:100%;height:100%;display:block;}
+.connect-card h1{font-size:27px;margin:0 0 8px;letter-spacing:-.02em;color:#12142B;}
+.connect-card h1 .azy{color:var(--accent);}
+.connect-card p{color:#5C6088;font-size:14px;line-height:1.6;margin:0 0 26px;}
+.btn-google{width:100%;background:#12142B;color:#fff;border:none;border-radius:12px;padding:13px 16px;
+  font-size:14.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;
+  cursor:pointer;transition:transform .2s var(--ease), background .2s var(--ease), box-shadow .2s var(--ease);}
+.btn-google:hover{background:var(--accent-dark);transform:translateY(-2px);box-shadow:0 12px 24px -10px rgba(86,66,214,.5);}
+.btn-google:active{transform:translateY(0);}
+.btn-google svg.gmark{background:#fff;border-radius:4px;padding:2px;}
+.demo-note{margin-top:16px;font-size:12px;color:#9195B8;line-height:1.6;}
+.demo-note button{background:none;border:none;color:var(--accent);font-weight:600;cursor:pointer;font-size:12px;padding:0;}
+#statusLine{margin-top:14px;font-size:12.5px;color:#9195B8;min-height:18px;}
+.feature-row{display:flex;justify-content:center;gap:18px;margin-top:22px;padding-top:20px;border-top:1px solid #ECEDF7;}
+.feature-row div{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:10.5px;color:#8286AE;font-weight:600;max-width:80px;}
+.feature-row .icon{color:var(--accent);width:19px;height:19px;}
+
+/* ================= APP SHELL ================= */
+.app{display:none;grid-template-columns:272px 1fr;min-height:100vh;position:relative;}
+.app.visible{display:grid;animation:appIn .5s var(--ease) both;}
+@keyframes appIn{from{opacity:0;}to{opacity:1;}}
+#ambientCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;transition:opacity .6s ease;}
+#ambientCanvas.off{opacity:0;}
+@media (max-width:880px){.app{grid-template-columns:1fr;}
+  .sidebar{position:fixed;bottom:0;left:0;right:0;top:auto;height:auto;flex-direction:row;align-items:center;
+    border-top:1px solid var(--line);padding:10px 12px;z-index:50;overflow-x:auto;gap:14px;border-radius:0;}
+  .sidebar .brand,.sidebar .accounts-block,.sidebar .nav-section,.sidebar .ai-card,.sidebar .sidebar-tools{display:none;}
+  .sidebar .nav-mobile{display:flex;gap:6px;flex:1;}
+  main{padding-bottom:110px;}
+  .side-panel{width:100% !important;}
+  .fab-assist{display:flex !important;}
+}
+.nav-mobile{display:none;}
+
+/* ---------- sidebar ---------- */
+.sidebar{background:var(--ink);color:#fff;padding:22px 18px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;position:relative;z-index:2;}
+[data-theme="dark"] .sidebar{background:#07081a;}
+.brand{display:flex;align-items:center;gap:10px;}
+.brand .mark3d{width:34px;height:34px;border-radius:9px;margin:0;flex-shrink:0;}
+.brand h1{font-size:18px;margin:0;letter-spacing:-.01em;}
+.brand h1 .azy{color:#B7ABFF;}
+.brand span{display:block;font-size:10.5px;color:#9CA3D4;}
+
+.accounts-block{border-top:1px solid rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.1);padding:14px 0;}
+.accounts-label{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:#8890C2;margin:0 0 10px;font-weight:700;}
+.account-row{display:flex;flex-wrap:wrap;gap:8px;}
+.avatar-chip{position:relative;width:36px;height:36px;border-radius:50%;cursor:pointer;flex-shrink:0;
+  border:2px solid transparent;transition:all .2s var(--ease);}
+.avatar-chip.active{border-color:var(--accent);box-shadow:0 0 0 3px rgba(108,92,231,.35);}
+.avatar-chip img,.avatar-chip .initials{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;}
+.avatar-chip .initials{background:#3A4172;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;color:#fff;}
+.avatar-chip .remove{position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:50%;background:var(--coral);
+  color:#fff;opacity:0;transition:opacity .15s ease;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.avatar-chip .remove .icon{width:9px;height:9px;stroke-width:3;}
+.avatar-chip:hover .remove{opacity:1;}
+.avatar-chip.add{background:rgba(255,255,255,.08);border:2px dashed rgba(255,255,255,.3);display:flex;
+  align-items:center;justify-content:center;color:#B7BCE0;}
+.avatar-chip.add:hover{background:rgba(255,255,255,.14);}
+.active-name{margin-top:11px;font-size:12.5px;color:#D5D8F2;}
+.active-name b{display:block;font-size:13.5px;color:#fff;font-weight:600;}
+
+/* AI card — sempre visível, no topo do menu */
+.ai-card{background:linear-gradient(135deg,rgba(108,92,231,.5),rgba(34,211,238,.28));border:1px solid rgba(148,138,255,.5);
+  border-radius:14px;padding:13px 14px;cursor:pointer;transition:transform .2s var(--ease), box-shadow .2s var(--ease);
+  position:relative;overflow:hidden;}
+.ai-card:hover{transform:translateY(-2px);box-shadow:0 14px 30px -12px rgba(108,92,231,.6);}
+.ai-card-top{display:flex;align-items:center;gap:9px;margin-bottom:4px;}
+.ai-card-top .icon{width:17px;height:17px;color:#fff;}
+.ai-card-top b{font-size:13.5px;color:#fff;}
+.ai-card p{margin:0;font-size:11px;color:#DCDCFA;line-height:1.4;}
+.ai-card .pulse-dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);margin-left:auto;box-shadow:0 0 0 0 rgba(34,211,238,.6);animation:pulse 2s infinite;}
+
+.nav-section{display:flex;flex-direction:column;gap:2px;}
+.nav-section-label{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:#8890C2;margin:12px 0 6px;font-weight:700;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;cursor:pointer;
+  font-size:13.5px;color:#D5D8F2;transition:background .15s ease;white-space:nowrap;border:none;background:none;width:100%;text-align:left;font-weight:500;}
+.nav-item .icon{width:16px;height:16px;color:#9CA3D4;flex-shrink:0;transition:color .15s ease;}
+.nav-item:hover{background:rgba(255,255,255,.07);}
+.nav-item.active{background:rgba(108,92,231,.35);color:#fff;}
+.nav-item.active .icon{color:#fff;}
+.nav-item .count{margin-left:auto;font-size:11px;color:#9CA3D4;font-family:'IBM Plex Mono',monospace;}
+.nav-item.active .count{color:#fff;}
+.nav-item .chev{margin-left:auto;width:13px;height:13px;transition:transform .2s ease;color:#8890C2;}
+.nav-item .chev.open{transform:rotate(90deg);}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+
+.course-list{list-style:none;margin:2px 0 0;padding:0 0 0 6px;display:flex;flex-direction:column;gap:1px;overflow:hidden;
+  max-height:0;transition:max-height .3s var(--ease);}
+.course-list.open{max-height:400px;}
+.course-item{display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;cursor:pointer;
+  font-size:13px;color:#C3C6EA;transition:background .15s ease;white-space:nowrap;}
+.course-item:hover{background:rgba(255,255,255,.07);}
+.course-item.active{background:rgba(108,92,231,.28);color:#fff;}
+.course-item .dot{width:6px;height:6px;}
+.course-item .count{margin-left:auto;font-size:10.5px;color:#9CA3D4;font-family:'IBM Plex Mono',monospace;}
+
+.sidebar-tools{display:flex;flex-direction:column;gap:7px;margin-top:auto;padding-top:10px;}
+.tool-btn{display:flex;align-items:center;gap:8px;justify-content:center;background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.12);color:#D5D8F2;border-radius:10px;padding:9px;font-size:12.5px;cursor:pointer;
+  transition:background .15s ease, transform .15s ease;font-weight:600;}
+.tool-btn:hover{background:rgba(255,255,255,.13);transform:translateY(-1px);}
+.tool-btn .icon{width:14px;height:14px;}
+.tool-btn.spinning .icon{animation:spinRotate .7s linear infinite;}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--mint);display:inline-block;margin-right:2px;
+  box-shadow:0 0 0 0 rgba(31,174,122,.6);animation:pulse 2s infinite;flex-shrink:0;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(34,211,238,.55);}70%{box-shadow:0 0 0 7px rgba(34,211,238,0);}100%{box-shadow:0 0 0 0 rgba(34,211,238,0);}}
+
+/* ---------- main ---------- */
+main{padding:30px 40px 60px;max-width:960px;position:relative;z-index:1;}
+.demo-banner{background:var(--amber-soft);color:var(--amber-ink);border:1px solid #F0D9A6;border-radius:12px;
+  padding:11px 16px;font-size:12.5px;margin-bottom:22px;display:flex;align-items:center;gap:10px;}
+[data-theme="dark"] .demo-banner{border-color:#5A4720;}
+.demo-banner .icon{width:16px;height:16px;flex-shrink:0;}
+.demo-banner b{white-space:nowrap;}
+
+.hero{margin-bottom:24px;display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.hero h2{font-size:24px;margin:0 0 4px;letter-spacing:-.01em;}
+.hero p{color:var(--ink-soft);font-size:13.5px;margin:0;display:flex;align-items:center;gap:6px;}
+.hero-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.btn-soft{border:1px solid var(--line);background:var(--paper);border-radius:11px;padding:9px 14px;
+  font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:7px;
+  transition:all .15s var(--ease);}
+.btn-soft .icon{width:14px;height:14px;}
+.btn-soft:hover{border-color:var(--accent);color:var(--accent);transform:translateY(-1px);box-shadow:0 6px 16px -8px rgba(108,92,231,.4);}
+.btn-soft.accent{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-soft.accent:hover{background:var(--accent-dark);color:#fff;}
+
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+.search{flex:1;min-width:180px;position:relative;}
+.search input{width:100%;padding:11px 14px 11px 38px;border-radius:11px;border:1px solid var(--line);
+  background:var(--paper);font-family:inherit;font-size:14px;color:var(--ink);transition:box-shadow .15s ease, border-color .15s ease;}
+.search input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+.search .icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--ink-soft);width:16px;height:16px;}
+.sort-select{border:1px solid var(--line);background:var(--paper);border-radius:11px;padding:10px 14px;
+  font-size:13.5px;color:var(--ink);cursor:pointer;}
+.view-toggle{display:flex;background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px;}
+.view-toggle button{border:none;background:none;padding:7px 10px;border-radius:8px;cursor:pointer;color:var(--ink-soft);display:flex;align-items:center;}
+.view-toggle button.active{background:var(--accent-soft);color:var(--accent);}
+.view-toggle .icon{width:15px;height:15px;}
+.bell-wrap{position:relative;}
+.bell-btn{border:1px solid var(--line);background:var(--paper);border-radius:11px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;color:var(--ink-soft);transition:all .15s ease;}
+.bell-btn:hover{border-color:var(--accent);color:var(--accent);}
+.bell-btn .icon{width:17px;height:17px;}
+.bell-badge{position:absolute;top:-4px;right:-4px;background:var(--coral);color:#fff;font-size:9.5px;font-weight:700;
+  min-width:16px;height:16px;border-radius:20px;display:flex;align-items:center;justify-content:center;padding:0 3px;font-family:'IBM Plex Mono',monospace;}
+.bell-dropdown{position:absolute;top:48px;right:0;width:300px;background:var(--paper);border:1px solid var(--line);
+  border-radius:14px;box-shadow:var(--shadow-lg);z-index:120;opacity:0;pointer-events:none;transform:translateY(-6px);
+  transition:all .2s var(--ease);max-height:360px;overflow-y:auto;}
+.bell-dropdown.open{opacity:1;pointer-events:auto;transform:translateY(0);}
+.bell-dropdown h4{margin:0;padding:14px 16px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);}
+.bell-item{padding:10px 16px;border-top:1px solid var(--line);cursor:pointer;transition:background .15s ease;}
+.bell-item:hover{background:var(--cloud);}
+.bell-item .t{font-size:13px;font-weight:600;margin-bottom:2px;}
+.bell-item .m{font-size:11.5px;color:var(--ink-soft);}
+.bell-empty{padding:24px 16px;text-align:center;font-size:12.5px;color:var(--ink-faint);}
+
+/* calendar strip */
+.week-strip{display:flex;gap:8px;margin-bottom:22px;overflow-x:auto;padding-bottom:2px;}
+.week-day{flex:1;min-width:78px;background:var(--paper);border:1px solid var(--line);border-radius:13px;padding:10px 8px;
+  text-align:center;cursor:pointer;transition:all .15s var(--ease);}
+.week-day:hover{border-color:var(--accent);}
+.week-day.today{background:var(--accent);border-color:var(--accent);}
+.week-day.today *{color:#fff !important;}
+.week-day .wd{font-size:10px;text-transform:uppercase;color:var(--ink-faint);font-weight:700;letter-spacing:.05em;}
+.week-day .dn{font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;margin:3px 0;}
+.week-day .wc{font-size:10px;color:var(--accent);font-weight:700;}
+.week-day .wc.zero{color:var(--ink-faint);}
+
+.stats{display:flex;gap:12px;margin-bottom:26px;flex-wrap:wrap;}
+.stat{flex:1;min-width:130px;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;
+  transition:transform .2s var(--ease), box-shadow .2s var(--ease);cursor:pointer;}
+.stat:hover{transform:translateY(-3px);box-shadow:var(--shadow-sm);}
+.stat b{display:block;font-family:'Space Grotesk',sans-serif;font-size:25px;line-height:1;margin-bottom:4px;
+  transition:color .3s ease;}
+.stat span{font-size:11.5px;color:var(--ink-soft);}
+.stat.overdue b{color:var(--coral);} .stat.today b{color:var(--amber);} .stat.done b{color:var(--mint);} .stat.pinned b{color:var(--accent);}
+
+h2.group-title{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-soft);
+  margin:30px 0 12px;display:flex;align-items:center;gap:8px;font-weight:700;}
+h2.group-title:first-of-type{margin-top:0;}
+h2.group-title .icon{width:13px;height:13px;}
+h2.group-title .badge{background:var(--accent-soft);color:var(--accent);font-size:10.5px;padding:2px 7px;
+  border-radius:20px;font-family:'IBM Plex Mono',monospace;}
+
+.spine{position:relative;padding-left:22px;}
+.spine::before{content:"";position:absolute;left:5px;top:6px;bottom:6px;width:2px;background:var(--line);}
+
+.task{position:relative;background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);
+  padding:var(--pad-card);margin-bottom:var(--gap-card);display:flex;align-items:flex-start;gap:14px;cursor:pointer;
+  transition:box-shadow .2s var(--ease), transform .2s var(--ease), opacity .3s ease;
+  animation:taskIn .45s var(--ease) both;}
+@keyframes taskIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+.task:hover{box-shadow:var(--shadow-sm);transform:translateY(-2px);border-color:#D7D9EE;}
+[data-theme="dark"] .task:hover{border-color:#3A3E70;}
+.task:active{transform:translateY(0) scale(.995);}
+.task::before{content:"";position:absolute;left:-22px;top:19px;width:11px;height:11px;border-radius:50%;
+  border:2px solid var(--cloud);background:var(--line);}
+.task.overdue::before{background:var(--coral);} .task.today::before{background:var(--amber);} .task.soon::before{background:var(--accent);}
+.task.done{opacity:.55;} .task.removing{opacity:0;transform:translateX(6px) scale(.97);}
+.task.pinned{border-color:var(--accent-soft-2);background:linear-gradient(0deg,var(--accent-soft) 0%,var(--paper) 120%);}
+
+.check{width:21px;height:21px;border-radius:7px;border:2px solid var(--line);flex-shrink:0;margin-top:2px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;background:var(--paper);transition:all .18s var(--ease);}
+.check:hover{border-color:var(--mint);transform:scale(1.08);}
+.check.checked{background:var(--mint);border-color:var(--mint);}
+.check .icon{width:12px;height:12px;stroke:#fff;stroke-width:3;opacity:0;transform:scale(.5);transition:all .15s ease;}
+.check.checked .icon{opacity:1;transform:scale(1);}
+
+.task-body{flex:1;min-width:0;}
+.task-title-row{display:flex;align-items:center;gap:6px;}
+.task-title{font-size:14.5px;font-weight:600;margin:0 0 5px;line-height:1.35;}
+.task.done .task-title{text-decoration:line-through;color:var(--ink-soft);}
+.pin-flag{width:13px;height:13px;color:var(--accent);flex-shrink:0;margin-bottom:5px;}
+.task-meta{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12px;color:var(--ink-soft);}
+.course-chip{display:inline-flex;align-items:center;gap:5px;font-weight:500;}
+.course-chip .dot{width:6px;height:6px;}
+.points{font-family:'IBM Plex Mono',monospace;font-size:11px;}
+.open-link{color:var(--accent);text-decoration:none;font-weight:600;}
+.open-link:hover{text-decoration:underline;}
+.submitted-tag{color:var(--mint);font-weight:600;display:inline-flex;align-items:center;gap:3px;}
+.submitted-tag .icon{width:11px;height:11px;}
+.attach-tag{display:inline-flex;align-items:center;gap:3px;color:var(--ink-faint);}
+.attach-tag .icon{width:11px;height:11px;}
+
+.task-side{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;}
+.due-pill{font-family:'IBM Plex Mono',monospace;font-size:11px;padding:3px 9px;border-radius:20px;
+  white-space:nowrap;flex-shrink:0;transition:background .3s ease,color .3s ease;}
+.due-pill.overdue{background:var(--coral-soft);color:var(--coral);}
+.due-pill.today{background:var(--amber-soft);color:var(--amber-ink);}
+.due-pill.soon{background:var(--accent-soft);color:var(--accent);}
+.due-pill.later,.due-pill.none{background:var(--cloud);color:var(--ink-soft);}
+.due-pill.done{background:var(--mint-soft);color:var(--mint);}
+.pin-btn{background:none;border:none;cursor:pointer;color:var(--ink-faint);padding:2px;border-radius:6px;transition:all .15s ease;}
+.pin-btn:hover{color:var(--accent);background:var(--accent-soft);}
+.pin-btn .icon{width:15px;height:15px;}
+.pin-btn.active{color:var(--accent);}
+.pin-btn.active .icon{fill:var(--accent);stroke:var(--accent);}
+
+.empty{text-align:center;padding:50px 20px;color:var(--ink-soft);font-size:13.5px;}
+.empty b{display:block;font-family:'Space Grotesk',sans-serif;font-size:16px;color:var(--ink);margin-bottom:6px;}
+.empty .icon{width:34px;height:34px;color:var(--accent-soft-2);margin-bottom:10px;}
+
+.skeleton{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);height:64px;margin-bottom:10px;
+  position:relative;overflow:hidden;}
+.skeleton::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(120,124,180,.08),transparent);
+  animation:shimmer 1.3s infinite;}
+@keyframes shimmer{from{transform:translateX(-100%);}to{transform:translateX(100%);}}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--cloud);
+  padding:12px 20px;border-radius:12px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.25);z-index:400;
+  max-width:min(420px,90vw);text-align:center;animation:toastIn .3s var(--ease);display:flex;align-items:center;gap:8px;}
+[data-theme="dark"] .toast{background:#2A2D52;}
+.toast .icon{width:15px;height:15px;flex-shrink:0;}
+@keyframes toastIn{from{opacity:0;transform:translate(-50%,10px);}to{opacity:1;transform:translate(-50%,0);}}
+
+/* ================= KANBAN ================= */
+.board{display:grid;grid-template-columns:repeat(4,minmax(200px,1fr));gap:14px;overflow-x:auto;padding-bottom:6px;}
+.board-col{background:var(--cloud-2);border-radius:16px;padding:12px;min-height:120px;}
+.board-col h4{margin:2px 4px 10px;font-size:12px;display:flex;align-items:center;gap:6px;font-weight:700;color:var(--ink-soft);}
+.board-col .dot{width:7px;height:7px;}
+.board .task{padding:11px 12px;margin-bottom:8px;}
+.board .task::before{display:none;}
+@media (max-width:880px){.board{grid-template-columns:1fr;}}
+
+/* ================= MODAL DE DETALHES ================= */
+.modal-backdrop{position:fixed;inset:0;background:rgba(11,13,31,.55);backdrop-filter:blur(3px);z-index:300;
+  display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;transition:opacity .25s var(--ease);}
+.modal-backdrop.open{opacity:1;}
+.modal-card{background:var(--paper);border-radius:22px;max-width:540px;width:100%;max-height:88vh;overflow-y:auto;
+  box-shadow:var(--shadow-lg);transform:translateY(18px) scale(.97);opacity:0;transition:all .3s var(--ease);}
+.modal-backdrop.open .modal-card{transform:translateY(0) scale(1);opacity:1;}
+.modal-head{display:flex;align-items:center;gap:14px;padding:24px 24px 14px;}
+.modal-3d{width:56px;height:56px;border-radius:16px;flex-shrink:0;overflow:hidden;position:relative;}
+.modal-3d canvas{width:100%;height:100%;display:block;}
+.modal-headtext{flex:1;min-width:0;}
+.modal-headtext .course-name{font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:3px;}
+.modal-headtext h3{margin:0;font-size:18.5px;line-height:1.3;letter-spacing:-.01em;}
+.modal-close{background:var(--cloud);border:none;width:32px;height:32px;border-radius:50%;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;color:var(--ink-soft);flex-shrink:0;transition:all .15s ease;}
+.modal-close:hover{background:var(--coral-soft);color:var(--coral);transform:rotate(90deg);}
+.modal-close .icon{width:15px;height:15px;}
+.modal-body{padding:6px 24px 24px;}
+.modal-badges{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.modal-badge{font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:20px;font-family:'IBM Plex Mono',monospace;display:inline-flex;align-items:center;gap:5px;}
+.modal-badge .icon{width:11px;height:11px;}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;}
+.modal-field label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);margin-bottom:4px;font-weight:700;}
+.modal-field div{font-size:14px;font-weight:600;}
+.modal-section{margin-bottom:18px;}
+.modal-section label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);margin-bottom:6px;font-weight:700;}
+.modal-desc{font-size:13.5px;line-height:1.6;color:var(--ink-soft);background:var(--cloud);padding:12px 14px;border-radius:12px;}
+.modal-note textarea{width:100%;min-height:80px;border:1px solid var(--line);border-radius:12px;padding:11px 13px;
+  font-family:inherit;font-size:13.5px;resize:vertical;color:var(--ink);background:var(--paper);transition:border-color .15s ease, box-shadow .15s ease;}
+.modal-note textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+.note-saved{font-size:11px;color:var(--mint);opacity:0;transition:opacity .3s ease;margin-top:5px;display:flex;align-items:center;gap:4px;}
+.note-saved .icon{width:11px;height:11px;}
+.note-saved.show{opacity:1;}
+.modal-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px;}
+.attach-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.attach-btn{border:1px dashed var(--line);background:var(--cloud);border-radius:11px;padding:10px 14px;font-size:12.5px;
+  color:var(--ink-soft);cursor:pointer;display:flex;align-items:center;gap:8px;font-weight:600;transition:all .15s ease;flex:1;}
+.attach-btn:hover{border-color:var(--accent);color:var(--accent);}
+.attach-btn .icon{width:14px;height:14px;}
+.attach-chip{display:flex;align-items:center;gap:6px;font-size:12px;background:var(--accent-soft);color:var(--accent);padding:8px 12px;border-radius:10px;font-weight:600;flex:1;}
+.attach-chip .icon{width:13px;height:13px;}
+.attach-chip button{margin-left:auto;background:none;border:none;color:var(--accent);cursor:pointer;display:flex;}
+.btn-primary{background:var(--accent);color:#fff;border:none;border-radius:11px;padding:11px 18px;font-size:13.5px;
+  font-weight:600;cursor:pointer;transition:all .18s var(--ease);display:flex;align-items:center;gap:8px;}
+.btn-primary:hover{background:var(--accent-dark);transform:translateY(-1px);box-shadow:0 10px 22px -10px rgba(86,66,214,.55);}
+.btn-primary:disabled{opacity:.55;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-primary .icon{width:15px;height:15px;}
+.btn-ghost{background:var(--cloud);color:var(--ink);border:1px solid var(--line);border-radius:11px;padding:11px 18px;
+  font-size:13.5px;font-weight:600;cursor:pointer;transition:all .18s var(--ease);display:flex;align-items:center;gap:7px;}
+.btn-ghost .icon{width:14px;height:14px;}
+.btn-ghost:hover{background:var(--cloud-2);}
+.btn-link{background:none;border:1px solid var(--line);color:var(--ink);border-radius:11px;padding:11px 18px;
+  font-size:13.5px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;
+  transition:all .18s var(--ease);}
+.btn-link:hover{border-color:var(--accent);color:var(--accent);}
+.btn-link .icon{width:14px;height:14px;}
+.spin-icon{animation:spinRotate .8s linear infinite;}
+@keyframes spinRotate{to{transform:rotate(360deg);}}
+
+/* ================= NEW TASK MODAL ================= */
+.tabs-row{display:flex;gap:4px;background:var(--cloud);border-radius:11px;padding:4px;margin-bottom:18px;}
+.tab-pill{flex:1;text-align:center;padding:9px;border-radius:8px;font-size:12.5px;font-weight:700;cursor:pointer;
+  color:var(--ink-soft);transition:all .18s ease;border:none;background:none;display:flex;align-items:center;justify-content:center;gap:6px;}
+.tab-pill .icon{width:13px;height:13px;}
+.tab-pill.active{background:var(--paper);color:var(--accent);box-shadow:0 2px 8px rgba(21,24,51,.08);}
+.form-row{margin-bottom:14px;}
+.form-row label{display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);margin-bottom:6px;font-weight:700;}
+.form-row input[type=text],.form-row input[type=date],.form-row input[type=number],.form-row select,.form-row textarea{
+  width:100%;border:1px solid var(--line);border-radius:11px;padding:10px 13px;font-family:inherit;font-size:13.5px;
+  color:var(--ink);background:var(--paper);transition:border-color .15s ease, box-shadow .15s ease;}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+.form-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.drop-zone{border:2px dashed var(--line);border-radius:14px;padding:26px 16px;text-align:center;cursor:pointer;transition:all .15s ease;background:var(--cloud);}
+.drop-zone:hover,.drop-zone.drag{border-color:var(--accent);background:var(--accent-soft);}
+.drop-zone .icon{width:26px;height:26px;color:var(--accent);margin-bottom:8px;}
+.drop-zone b{display:block;font-size:13.5px;margin-bottom:3px;}
+.drop-zone span{font-size:11.5px;color:var(--ink-faint);}
+.ai-status{display:flex;align-items:center;gap:10px;background:var(--accent-soft);border-radius:12px;padding:12px 14px;margin:14px 0;font-size:12.5px;color:var(--accent-dark);}
+[data-theme="dark"] .ai-status{color:#C9C2FF;}
+.ai-status .icon{width:16px;height:16px;flex-shrink:0;}
+.ai-status .spin-icon{width:15px;height:15px;}
+.file-preview-name{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:12px;background:var(--cloud);padding:9px 12px;border-radius:10px;}
+.file-preview-name .icon{width:14px;height:14px;color:var(--accent);}
+
+/* ================= SIDE PANEL (IA + Anotações) ================= */
+.panel-overlay{position:fixed;inset:0;background:rgba(11,13,31,.35);z-index:250;opacity:0;pointer-events:none;
+  transition:opacity .25s var(--ease);}
+.panel-overlay.open{opacity:1;pointer-events:auto;}
+.side-panel{position:fixed;top:0;right:0;bottom:0;width:410px;max-width:100vw;background:var(--paper);z-index:260;
+  box-shadow:-20px 0 50px -20px rgba(10,12,30,.35);display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .35s var(--ease);}
+.side-panel.dock-left{left:0;right:auto;box-shadow:20px 0 50px -20px rgba(10,12,30,.35);transform:translateX(-100%);}
+.side-panel.open{transform:translateX(0);}
+.panel-head{padding:18px 20px 0;flex-shrink:0;}
+.panel-head-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.panel-head-top h3{margin:0;font-size:16.5px;display:flex;align-items:center;gap:8px;}
+.panel-head-top h3 .icon{width:18px;height:18px;color:var(--accent);}
+.panel-tabs{display:flex;gap:4px;background:var(--cloud);border-radius:11px;padding:4px;margin-bottom:14px;}
+.panel-tab{flex:1;text-align:center;padding:8px;border-radius:8px;font-size:12.5px;font-weight:600;cursor:pointer;
+  color:var(--ink-soft);transition:all .18s ease;border:none;background:none;}
+.panel-tab.active{background:var(--paper);color:var(--accent);box-shadow:0 2px 8px rgba(21,24,51,.08);}
+.panel-view{flex:1;display:none;min-height:0;flex-direction:column;}
+.panel-view.active{display:flex;}
+
+/* chat */
+.chat-scroll{flex:1;overflow-y:auto;padding:6px 20px;display:flex;flex-direction:column;gap:12px;}
+.chat-msg{max-width:86%;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.55;white-space:pre-wrap;
+  animation:msgIn .25s var(--ease) both;}
+@keyframes msgIn{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.chat-msg.ai{align-self:flex-start;background:var(--accent-soft);color:var(--ink);border-bottom-left-radius:4px;}
+.chat-msg.user{align-self:flex-end;background:var(--ink);color:var(--cloud);border-bottom-right-radius:4px;}
+.chat-typing{align-self:flex-start;display:flex;gap:4px;padding:12px 14px;background:var(--accent-soft);border-radius:14px;
+  border-bottom-left-radius:4px;}
+.chat-typing span{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:.5;animation:typingDot 1.1s infinite;}
+.chat-typing span:nth-child(2){animation-delay:.15s;} .chat-typing span:nth-child(3){animation-delay:.3s;}
+@keyframes typingDot{0%,60%,100%{transform:translateY(0);opacity:.4;}30%{transform:translateY(-4px);opacity:1;}}
+.chat-suggest{display:flex;flex-wrap:wrap;gap:6px;padding:10px 20px 4px;}
+.chat-suggest button{border:1px solid var(--line);background:var(--paper);border-radius:20px;padding:6px 12px;
+  font-size:11.5px;color:var(--ink-soft);cursor:pointer;transition:all .15s ease;}
+.chat-suggest button:hover{border-color:var(--accent);color:var(--accent);}
+.chat-input-row{display:flex;gap:8px;padding:14px 20px 18px;border-top:1px solid var(--line);flex-shrink:0;}
+.chat-input-row input{flex:1;border:1px solid var(--line);border-radius:11px;padding:11px 14px;font-family:inherit;
+  font-size:13.5px;background:var(--paper);color:var(--ink);transition:border-color .15s ease, box-shadow .15s ease;}
+.chat-input-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+.chat-input-row button{background:var(--accent);color:#fff;border:none;border-radius:11px;width:42px;flex-shrink:0;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s ease;}
+.chat-input-row button:hover{background:var(--accent-dark);}
+.chat-input-row button .icon{width:16px;height:16px;}
+
+/* notes tab */
+.notes-view{padding:6px 20px 20px;flex:1;display:flex;flex-direction:column;}
+.notes-view textarea{flex:1;width:100%;border:1px solid var(--line);border-radius:14px;padding:16px;
+  font-family:'IBM Plex Mono',monospace;font-size:13px;line-height:1.7;resize:none;color:var(--ink);background:var(--paper);min-height:200px;
+  transition:border-color .15s ease, box-shadow .15s ease;}
+.notes-view textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft);}
+.notes-hint{font-size:11.5px;color:var(--ink-faint);margin:10px 0 0;display:flex;align-items:center;gap:6px;}
+.notes-hint .icon{width:11px;height:11px;}
+
+.fab-assist{display:flex;position:fixed;bottom:26px;right:26px;z-index:60;background:var(--accent);color:#fff;
+  border:none;height:54px;border-radius:27px;box-shadow:0 16px 34px -10px rgba(86,66,214,.65);cursor:pointer;
+  align-items:center;justify-content:center;gap:9px;padding:0 20px 0 18px;font-size:13.5px;font-weight:700;
+  transition:transform .2s var(--ease), box-shadow .2s var(--ease);}
+.fab-assist:hover{transform:translateY(-3px) scale(1.02);box-shadow:0 20px 40px -10px rgba(86,66,214,.75);}
+.fab-assist .icon{width:19px;height:19px;}
+.fab-assist.dock-left{right:auto;left:26px;}
+@media (max-width:880px){.fab-assist span{display:none;}.fab-assist{width:54px;padding:0;border-radius:50%;}}
+
+/* ================= SETTINGS PAGE ================= */
+.settings-wrap{max-width:760px;}
+.settings-section{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:22px 24px;margin-bottom:18px;}
+.settings-section h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px;}
+.settings-section h3 .icon{width:16px;height:16px;color:var(--accent);}
+.settings-section > p{margin:0 0 18px;font-size:12.5px;color:var(--ink-soft);}
+.settings-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:13px 0;border-top:1px solid var(--line);}
+.settings-row:first-of-type{border-top:none;}
+.settings-row-text b{display:block;font-size:13.5px;margin-bottom:2px;}
+.settings-row-text span{font-size:12px;color:var(--ink-soft);}
+.switch{position:relative;width:42px;height:24px;flex-shrink:0;}
+.switch input{opacity:0;width:0;height:0;}
+.switch .track{position:absolute;inset:0;background:var(--line);border-radius:20px;cursor:pointer;transition:background .2s ease;}
+.switch .track::after{content:"";position:absolute;width:18px;height:18px;border-radius:50%;background:#fff;top:3px;left:3px;transition:transform .2s var(--ease);box-shadow:0 2px 6px rgba(0,0,0,.25);}
+.switch input:checked + .track{background:var(--accent);}
+.switch input:checked + .track::after{transform:translateX(18px);}
+.pill-group{display:flex;gap:8px;flex-wrap:wrap;}
+.pill-opt{border:1px solid var(--line);background:var(--paper);border-radius:10px;padding:8px 14px;font-size:12.5px;
+  font-weight:600;color:var(--ink-soft);cursor:pointer;transition:all .15s ease;display:flex;align-items:center;gap:6px;}
+.pill-opt .icon{width:13px;height:13px;}
+.pill-opt.active{border-color:var(--accent);color:var(--accent);background:var(--accent-soft);}
+.swatch-row{display:flex;gap:10px;flex-wrap:wrap;}
+.swatch{width:34px;height:34px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .15s var(--ease);position:relative;}
+.swatch.active{border-color:var(--paper);box-shadow:0 0 0 2px var(--ink);}
+.swatch.active::after{content:"";position:absolute;inset:0;margin:auto;width:8px;height:8px;border-radius:50%;background:#fff;}
+.range-row{display:flex;align-items:center;gap:12px;}
+.range-row input[type=range]{flex:1;accent-color:var(--accent);}
+.range-row .val{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--ink-soft);min-width:34px;text-align:right;}
+.settings-preview{display:flex;align-items:center;gap:14px;padding:16px;background:var(--cloud);border-radius:14px;margin-bottom:18px;}
+.settings-preview .mark3d{width:48px;height:48px;border-radius:13px;margin:0;}
+.settings-preview div p{margin:0;font-size:12px;color:var(--ink-soft);}
+.settings-preview div b{font-size:14px;display:block;margin-bottom:2px;}
+.danger-btn{border:1px solid var(--coral-soft);background:var(--coral-soft);color:var(--coral);border-radius:10px;
+  padding:9px 16px;font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;transition:all .15s ease;}
+.danger-btn:hover{background:var(--coral);color:#fff;}
+.danger-btn .icon{width:13px;height:13px;}
+</style>
+</head>
+<body>
+
+<!-- ================= SPRITE DE ICONES (substitui todos os emojis) ================= -->
+<svg class="sprite-defs" xmlns="http://www.w3.org/2000/svg">
+<defs>
+<symbol id="i-robot" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="3"/><circle cx="9" cy="14" r="1.2" fill="currentColor" stroke="none"/><circle cx="15" cy="14" r="1.2" fill="currentColor" stroke="none"/><path d="M12 8V4"/><circle cx="12" cy="3" r="1.2"/><path d="M2 13h2M20 13h2"/></symbol>
+<symbol id="i-note" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/><path d="M8 13h8M8 17h5"/></symbol>
+<symbol id="i-settings" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 0 1-4 0v-.09A1.7 1.7 0 0 0 9 19.36a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.64 15a1.7 1.7 0 0 0-1.55-1H3a2 2 0 0 1 0-4h.09A1.7 1.7 0 0 0 4.64 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.64a1.7 1.7 0 0 0 1-1.55V3a2 2 0 0 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.36 9c.1.64.5 1.2 1.09 1.44.28.11.59.17.9.17H21a2 2 0 0 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1Z"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h5v-6h4v6h5V10"/></symbol>
+<symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4" cy="6" r="1.4" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.4" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 17v5"/><path d="M8 3h8l-1 6 3 3v2H6v-2l3-3Z"/></symbol>
+<symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 3H20v18H6.5A2.5 2.5 0 0 1 4 18.5v-13A2.5 2.5 0 0 1 6.5 3Z"/></symbol>
+<symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+<symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></symbol>
+<symbol id="i-google" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.9 32.6 29.4 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.2-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c3.1 0 5.8 1.1 8 3l6-6C34.6 5.1 29.6 3 24 3c-7.5 0-14 4.2-17.7 10.4z"/><path fill="#4CAF50" d="M24 45c5.4 0 10.4-2 14.1-5.4l-6.5-5.5C29.6 35.7 26.9 36.6 24 36.6c-5.3 0-9.8-3.4-11.4-8.1l-6.5 5C9.9 40.7 16.4 45 24 45z"/><path fill="#1976D2" d="M43.6 20.5H24v8h11.3c-1.1 3-3.2 5.3-6 6.7l6.5 5.5C39.4 37.5 43 31.7 43 24c0-1.2-.1-2.3-.4-3.5z"/></symbol>
+<symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+<symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+<symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13"/></symbol>
+<symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6"/><path d="M20 4 10 14"/><path d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h6"/></symbol>
+<symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4Z"/></symbol>
+<symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/></symbol>
+<symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></symbol>
+<symbol id="i-palette" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.4 0 2-1 2-2 0-.6-.3-1-.6-1.4-.3-.4-.5-.7-.5-1.2 0-.9.7-1.4 1.6-1.4H16a4 4 0 0 0 4-4c0-4.4-3.6-8-8-8Z"/><circle cx="7.5" cy="10.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="7.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="16.2" cy="10.2" r="1.1" fill="currentColor" stroke="none"/></symbol>
+<symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h13M20 18h0"/><circle cx="15" cy="6" r="2"/><circle cx="7" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+<symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+<symbol id="i-paperclip" viewBox="0 0 24 24"><path d="M21 12.5 12.5 21a5 5 0 0 1-7-7L14 5.5a3.3 3.3 0 0 1 4.7 4.7L10 19a1.7 1.7 0 0 1-2.4-2.4L15 9"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16.5 5.5a3.2 3.2 0 0 1 0 6.2"/><path d="M20 20a5.7 5.7 0 0 0-3.3-5.2"/></symbol>
+<symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 9a6 6 0 1 1 12 0c0 4 1.5 5.5 1.5 5.5H4.5S6 13 6 9Z"/><path d="M10 19a2 2 0 0 0 4 0"/></symbol>
+<symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><path d="M12 8a4 4 0 0 0 4 4 4 4 0 0 0-4 4 4 4 0 0 0-4-4 4 4 0 0 0 4-4Z"/></symbol>
+<symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></symbol>
+<symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4"/><path d="M5 4h13l-2.5 4L18 12H5"/></symbol>
+<symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5"/><path d="M4 19h16"/></symbol>
+<symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></symbol>
+<symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6M10 3v6l-5.5 9a2 2 0 0 0 1.7 3h11.6a2 2 0 0 0 1.7-3L14 9V3"/><path d="M7.5 15h9"/></symbol>
+<symbol id="i-board" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M9 4v17M15 4v17"/></symbol>
+<symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6"/></symbol>
+</defs>
+</svg>
+
+<!-- ============== TELA DE CONEXÃO ============== -->
+<div id="connectScreen">
+  <canvas id="bgCanvas"></canvas>
+  <div class="connect-card">
+    <div class="mark3d" id="markConnect"></div>
+    <h1 class="display">Classe<span class="azy">Azy</span></h1>
+    <p>Conecte sua conta do Google para importar turmas e atividades do Classroom, organizadas por prazo — com um assistente de IA sempre à mão, fixação de pendências e leitura automática de arquivos.</p>
+    <button class="btn-google" onclick="startLogin()">
+      <svg class="gmark" width="18" height="18" viewBox="0 0 48 48"><use href="#i-google"/></svg>
+      Conectar com o Google
+    </button>
+    <div id="statusLine"></div>
+    <p class="demo-note">Sem credenciais configuradas ainda? <button onclick="startDemo()">Ver com dados de exemplo</button></p>
+    <div class="feature-row">
+      <div><svg class="icon" width="19" height="19" viewBox="0 0 24 24"><use href="#i-pin"/></svg>Fixar pendências</div>
+      <div><svg class="icon" width="19" height="19" viewBox="0 0 24 24"><use href="#i-robot"/></svg>Assistente de IA</div>
+      <div><svg class="icon" width="19" height="19" viewBox="0 0 24 24"><use href="#i-doc"/></svg>Importar de PDF</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============== APP ============== -->
+<div class="app" id="app">
+  <canvas id="ambientCanvas"></canvas>
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="mark3d" id="markSidebar"></div>
+      <div><h1 class="display">Classe<span class="azy">Azy</span></h1><span>estude com clareza</span></div>
+    </div>
+
+    <div class="ai-card" onclick="openPanel('chat')">
+      <div class="ai-card-top">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-robot"/></svg>
+        <b>Assistente de IA</b>
+        <span class="pulse-dot"></span>
+      </div>
+      <p>Pergunte o que está atrasado, peça prioridades ou converse sobre seus estudos.</p>
+    </div>
+
+    <div class="accounts-block">
+      <p class="accounts-label">Contas</p>
+      <div class="account-row" id="accountRow"></div>
+      <div class="active-name" id="activeName"></div>
+    </div>
+
+    <div class="nav-section">
+      <button class="nav-item" id="navHome" onclick="setView('dashboard')">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-home"/></svg> Painel
+      </button>
+      <button class="nav-item" id="navPinned" onclick="setView('pinned')">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-pin"/></svg> Fixados <span class="count" id="pinnedCount">0</span>
+      </button>
+      <button class="nav-item" id="navCalendar" onclick="setView('calendar')">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-calendar"/></svg> Calendário
+      </button>
+      <button class="nav-item" id="navCourses" onclick="toggleCourseList()">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-book"/></svg> Turmas <svg class="chev" id="courseChev" viewBox="0 0 24 24"><use href="#i-external"/></svg>
+      </button>
+      <ul class="course-list open" id="courseList"></ul>
+      <button class="nav-item" id="navSettings" onclick="setView('settings')">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-settings"/></svg> Configurações
+      </button>
+    </div>
+
+    <div class="sidebar-tools">
+      <button class="tool-btn" onclick="openNewTaskModal()">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-plus"/></svg> Nova pendência
+      </button>
+      <button class="tool-btn" onclick="openPanel('notes')">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-note"/></svg> Minhas anotações
+      </button>
+      <button class="tool-btn" id="refreshBtn" onclick="refreshActive()">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-refresh"/></svg> Atualizar dados
+      </button>
+    </div>
+  </aside>
+
+  <main id="mainArea">
+    <!-- ---- VIEW: DASHBOARD ---- -->
+    <div id="viewDashboard">
+      <div class="demo-banner" id="demoBanner" style="display:none;">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-flask"/></svg> <b>Modo demonstração:</b> exibindo dados de exemplo. Configure o Client ID no código para ver seus dados reais.
+      </div>
+
+      <div class="hero">
+        <div>
+          <h2 class="display" id="heroTitle">Suas atividades</h2>
+          <p id="heroSubtitle">Carregando...</p>
+        </div>
+        <div class="hero-actions">
+          <button class="btn-soft accent" onclick="openNewTaskModal()"><svg class="icon" viewBox="0 0 24 24"><use href="#i-plus"/></svg> Nova pendência</button>
+          <button class="btn-soft" onclick="openPanel('chat')"><svg class="icon" viewBox="0 0 24 24"><use href="#i-robot"/></svg> Perguntar à IA</button>
+          <button class="btn-soft" onclick="openPanel('notes')"><svg class="icon" viewBox="0 0 24 24"><use href="#i-note"/></svg> Anotações</button>
+        </div>
+      </div>
+
+      <div class="week-strip" id="weekStrip"></div>
+
+      <div class="topbar">
+        <div class="search">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-search"/></svg>
+          <input type="text" id="searchInput" placeholder="Buscar atividade..." oninput="render()">
+        </div>
+        <select class="sort-select" id="sortSelect" onchange="render()">
+          <option value="due">Ordenar por prazo</option>
+          <option value="course">Ordenar por turma</option>
+          <option value="title">Ordenar por título</option>
+        </select>
+        <div class="view-toggle">
+          <button id="viewBtnList" class="active" onclick="setBoardMode('list')" title="Lista"><svg class="icon" viewBox="0 0 24 24"><use href="#i-list"/></svg></button>
+          <button id="viewBtnBoard" onclick="setBoardMode('board')" title="Quadro"><svg class="icon" viewBox="0 0 24 24"><use href="#i-board"/></svg></button>
+        </div>
+        <div class="bell-wrap">
+          <button class="bell-btn" onclick="toggleBell(event)">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-bell"/></svg>
+            <span class="bell-badge" id="bellBadge" style="display:none;">0</span>
+          </button>
+          <div class="bell-dropdown" id="bellDropdown"></div>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat overdue" onclick="setView('dashboard');document.getElementById('searchInput').value='';activeCourse='all';render();"><b id="statOverdue">–</b><span>atrasadas</span></div>
+        <div class="stat today"><b id="statToday">–</b><span>vencem hoje</span></div>
+        <div class="stat"><b id="statPending">–</b><span>pendentes no total</span></div>
+        <div class="stat pinned" onclick="setView('pinned')"><b id="statPinned">–</b><span>fixadas</span></div>
+        <div class="stat done"><b id="statDone">–</b><span>concluídas</span></div>
+      </div>
+
+      <div id="taskContainer">
+        <div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>
+      </div>
+    </div>
+
+    <!-- ---- VIEW: PINNED ---- -->
+    <div id="viewPinned" style="display:none;">
+      <div class="hero"><div><h2 class="display">Pendências fixadas</h2><p>Tudo que você marcou para manter à vista.</p></div></div>
+      <div id="pinnedContainer"></div>
+    </div>
+
+    <!-- ---- VIEW: CALENDAR ---- -->
+    <div id="viewCalendar" style="display:none;">
+      <div class="hero"><div><h2 class="display">Calendário</h2><p>Suas próximas duas semanas, dia a dia.</p></div></div>
+      <div id="calendarContainer"></div>
+    </div>
+
+    <!-- ---- VIEW: SETTINGS ---- -->
+    <div id="viewSettings" style="display:none;" class="settings-wrap"></div>
+  </main>
+</div>
+
+<!-- ============== MODAL DE DETALHES DA ATIVIDADE ============== -->
+<div class="modal-backdrop" id="taskModal" onclick="if(event.target===this) closeTaskModal()">
+  <div class="modal-card" id="taskModalCard"></div>
+</div>
+
+<!-- ============== MODAL NOVA PENDÊNCIA / IMPORTAR ============== -->
+<div class="modal-backdrop" id="newTaskModal" onclick="if(event.target===this) closeNewTaskModal()">
+  <div class="modal-card" id="newTaskModalCard"></div>
+</div>
+
+<!-- ============== PAINEL LATERAL (IA + ANOTAÇÕES) ============== -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+<div class="side-panel" id="sidePanel">
+  <div class="panel-head">
+    <div class="panel-head-top">
+      <h3><svg class="icon" id="panelIcon" viewBox="0 0 24 24"><use href="#i-robot"/></svg> <span id="panelTitle">Assistente</span></h3>
+      <button class="modal-close" onclick="closePanel()"><svg class="icon" viewBox="0 0 24 24"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="panel-tabs">
+      <button class="panel-tab active" id="tabBtnChat" onclick="switchPanelTab('chat')">Assistente</button>
+      <button class="panel-tab" id="tabBtnNotes" onclick="switchPanelTab('notes')">Anotações</button>
+    </div>
+  </div>
+
+  <div class="panel-view active" id="viewChat">
+    <div class="chat-scroll" id="chatScroll"></div>
+    <div class="chat-suggest" id="chatSuggest">
+      <button onclick="quickAsk('O que está atrasado?')">O que está atrasado?</button>
+      <button onclick="quickAsk('O que vence hoje?')">Vence hoje?</button>
+      <button onclick="quickAsk('Me ajude a priorizar')">Priorizar</button>
+    </div>
+    <div class="chat-input-row">
+      <input type="text" id="chatInput" placeholder="Pergunte sobre suas atividades..." onkeydown="if(event.key==='Enter') sendAssistantMessage()">
+      <button onclick="sendAssistantMessage()">
+        <svg class="icon" viewBox="0 0 24 24" stroke="#fff"><use href="#i-send"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div class="panel-view" id="viewNotes">
+    <div class="notes-view">
+      <label style="font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);margin-bottom:8px;display:block;font-weight:700;">Bloco de notas geral</label>
+      <textarea id="globalNotesArea" placeholder="Anote lembretes, ideias de estudo ou o que precisar..." oninput="onGlobalNotesInput()"></textarea>
+      <p class="notes-hint"><span id="notesSavedIndicator" style="opacity:0;transition:opacity .3s ease;color:var(--mint);display:flex;align-items:center;gap:4px;"><svg class="icon" viewBox="0 0 24 24" width="11" height="11"><use href="#i-check"/></svg> salvo</span></p>
+    </div>
+  </div>
+</div>
+
+<button class="fab-assist" id="fabAssist" onclick="openPanel('chat')">
+  <svg class="icon" viewBox="0 0 24 24"><use href="#i-robot"/></svg><span>Assistente</span>
+</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+/* ============================================================
+   CONFIGURAÇÃO — troque pelo seu próprio Client ID do Google
+   Cloud Console. Enquanto estiver vazio, o app roda em modo demonstração.
+   ============================================================ */
+const GOOGLE_CLIENT_ID = "818049316505-1spa9tp1gh4im3oaksg85qksrecdqkpl.apps.googleusercontent.com";
+
+/* Opcional: cole aqui uma API key do Google AI Studio (Gemini) para ligar
+   o assistente e a importação de arquivos a uma IA real. Sem chave, tudo
+   funciona em modo local inteligente (heurística), sem sair do navegador. */
+const GEMINI_API_KEY = "";
+const GEMINI_MODEL = "gemini-2.0-flash";
+
+const SCOPES = [
+  'openid',
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile',
+  'https://www.googleapis.com/auth/classroom.courses.readonly',
+  'https://www.googleapis.com/auth/classroom.coursework.me.readonly',
+  'https://www.googleapis.com/auth/classroom.student-submissions.me.readonly',
+].join(' ');
+
+if(window.pdfjsLib){ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }
+
+const PALETTE = ['#6C5CE7','#F5A623','#1FAE7A','#EF5D5D','#22B8CE','#B45FD1'];
+const ACCENT_SWATCHES = ['#6C5CE7','#22D3EE','#1FAE7A','#F5A623','#EF5D5D','#B45FD1','#2F80ED','#12142B'];
+
+let tokenClient = null;
+let accounts = {};      // email -> {email, name, picture, token, courses:[], tasks:[]}
+let activeEmail = null;
+let activeCourse = 'all';
+let demoMode = false;
+let autoSyncTimer = null;
+let clockTimer = null;
+let currentModalTaskId = null;
+let currentPanelTab = 'chat';
+let currentView = 'dashboard';
+let boardMode = 'list';
+let newTaskTab = 'manual';
+let newTaskFile = null;
+let newTaskExtracted = null;
+let modalAttachment = null;
+
+/* ================================================================
+   CONFIGURAÇÕES DE INTERFACE (tema, cor, densidade, movimento...)
+   ================================================================ */
+const SETTINGS_KEY = 'classeazy_settings_v2';
+const DEFAULT_SETTINGS = {
+  theme:'light', accent:'#6C5CE7', density:'cozy', radius:16,
+  reduceMotion:false, ambient3d:true, assistantDock:'right', notifSound:false
+};
+let settings = loadSettings();
+
+function loadSettings(){
+  try{ return Object.assign({}, DEFAULT_SETTINGS, JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')); }
+  catch(e){ return Object.assign({}, DEFAULT_SETTINGS); }
+}
+function saveSettings(){ try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }catch(e){} }
+
+function hexToRgb(hex){
+  const h = hex.replace('#','');
+  const n = h.length===3 ? h.split('').map(c=>c+c).join('') : h;
+  const num = parseInt(n,16);
+  return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
+}
+function shade(hex, pct){ // pct negativo escurece, positivo clareia
+  const {r,g,b} = hexToRgb(hex);
+  const f = pct/100;
+  const mix = (c) => Math.round(f<0 ? c*(1+f) : c+(255-c)*f);
+  return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
+}
+function rgba(hex, a){ const {r,g,b} = hexToRgb(hex); return `rgba(${r},${g},${b},${a})`; }
+
+function applySettings(){
+  const root = document.documentElement;
+  root.setAttribute('data-theme', settings.theme);
+  root.setAttribute('data-density', settings.density);
+  root.style.setProperty('--accent', settings.accent);
+  root.style.setProperty('--accent-dark', shade(settings.accent, -18));
+  root.style.setProperty('--accent-soft', settings.theme==='dark' ? rgba(settings.accent,.22) : rgba(settings.accent,.12));
+  root.style.setProperty('--accent-soft-2', settings.theme==='dark' ? rgba(settings.accent,.32) : rgba(settings.accent,.2));
+  root.style.setProperty('--radius', settings.radius+'px');
+  document.body.classList.toggle('reduce-motion', !!settings.reduceMotion);
+  const fab = document.getElementById('fabAssist');
+  const panel = document.getElementById('sidePanel');
+  if(fab) fab.classList.toggle('dock-left', settings.assistantDock==='left');
+  if(panel) panel.classList.toggle('dock-left', settings.assistantDock==='left');
+  const amb = document.getElementById('ambientCanvas');
+  if(amb) amb.classList.toggle('off', !settings.ambient3d);
+  if(settings.ambient3d) startAmbientScene(); else stopAmbientScene();
+}
+
+/* ================================================================
+   THREE.JS — cenas 3D decorativas
+   ================================================================ */
+const miniScenes = {}; // id -> {renderer, raf}
+
+function safeThree(fn){
+  try{ if(window.THREE) fn(); }catch(e){ console.warn('three.js indisponível', e); }
+}
+
+function makeMaterial(color){
+  return new THREE.MeshStandardMaterial({ color, metalness:.35, roughness:.25, flatShading:true });
+}
+
+function pickGeometry(seed){
+  const geoms = [
+    () => new THREE.IcosahedronGeometry(1, 0),
+    () => new THREE.TorusGeometry(.75,.28,10,24),
+    () => new THREE.OctahedronGeometry(1.05,0),
+    () => new THREE.DodecahedronGeometry(1,0)
+  ];
+  return geoms[Math.abs(seed) % geoms.length]();
+}
+
+function hashCode(str){
+  let h = 0;
+  for(let i=0;i<str.length;i++){ h = (h<<5) - h + str.charCodeAt(i); h |= 0; }
+  return h;
+}
+
+/* Cena de fundo — tela de conexão */
+let connectScene, connectCamera, connectRenderer, connectRaf, connectMeshes = [];
+function initConnectScene(){
+  safeThree(()=>{
+    const canvas = document.getElementById('bgCanvas');
+    if(!canvas) return;
+    connectScene = new THREE.Scene();
+    connectCamera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, .1, 100);
+    connectCamera.position.set(0,0,9);
+    connectRenderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+    connectRenderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    connectRenderer.setSize(window.innerWidth, window.innerHeight);
+
+    connectScene.add(new THREE.AmbientLight(0x8888ff, .7));
+    const p1 = new THREE.PointLight(0x8A7FF2, 2.2, 30); p1.position.set(6,4,6); connectScene.add(p1);
+    const p2 = new THREE.PointLight(0x22D3EE, 1.6, 30); p2.position.set(-6,-3,4); connectScene.add(p2);
+
+    const colors = [0x6C5CE7,0x22D3EE,0xF5A623,0x1FAE7A,0xEF5D5D,0x8A7FF2];
+    connectMeshes = [];
+    for(let i=0;i<8;i++){
+      const geo = pickGeometry(i);
+      const mesh = new THREE.Mesh(geo, makeMaterial(colors[i % colors.length]));
+      const radius = 4 + Math.random()*3.5;
+      const angle = (i/8) * Math.PI*2;
+      mesh.position.set(Math.cos(angle)*radius, (Math.random()-.5)*5, Math.sin(angle)*radius - 2);
+      const scale = .5 + Math.random()*.9;
+      mesh.scale.set(scale,scale,scale);
+      mesh.userData.spin = { x:(Math.random()-.5)*.008, y:(Math.random()-.5)*.012, z:(Math.random()-.5)*.006 };
+      mesh.userData.float = { base: mesh.position.y, amp: .3+Math.random()*.4, speed: .3+Math.random()*.5, phase: Math.random()*Math.PI*2 };
+      connectScene.add(mesh);
+      connectMeshes.push(mesh);
+    }
+
+    const particleCount = 220;
+    const positions = new Float32Array(particleCount*3);
+    for(let i=0;i<particleCount;i++){
+      positions[i*3] = (Math.random()-.5)*40;
+      positions[i*3+1] = (Math.random()-.5)*30;
+      positions[i*3+2] = (Math.random()-.5)*30 - 5;
+    }
+    const pGeo = new THREE.BufferGeometry();
+    pGeo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+    const pMat = new THREE.PointsMaterial({ color:0xA9A4F5, size:.045, transparent:true, opacity:.55 });
+    const points = new THREE.Points(pGeo, pMat);
+    connectScene.add(points);
+    connectMeshes.__points = points;
+
+    let mouseX = 0, mouseY = 0;
+    window.addEventListener('mousemove', e=>{
+      mouseX = (e.clientX / window.innerWidth - .5);
+      mouseY = (e.clientY / window.innerHeight - .5);
+    });
+
+    const clock = new THREE.Clock();
+    function animate(){
+      connectRaf = requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+      connectMeshes.forEach(m=>{
+        m.rotation.x += m.userData.spin.x;
+        m.rotation.y += m.userData.spin.y;
+        m.rotation.z += m.userData.spin.z;
+        const f = m.userData.float;
+        m.position.y = f.base + Math.sin(t*f.speed + f.phase) * f.amp;
+      });
+      points.rotation.y = t*.01;
+      connectCamera.position.x += (mouseX*1.5 - connectCamera.position.x) * .02;
+      connectCamera.position.y += (-mouseY*1.5 - connectCamera.position.y) * .02;
+      connectCamera.lookAt(0,0,0);
+      connectRenderer.render(connectScene, connectCamera);
+    }
+    animate();
+    canvas.classList.add('ready');
+
+    window.addEventListener('resize', ()=>{
+      if(!connectRenderer) return;
+      connectCamera.aspect = window.innerWidth/window.innerHeight;
+      connectCamera.updateProjectionMatrix();
+      connectRenderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  });
+}
+function destroyConnectScene(){ if(connectRaf) cancelAnimationFrame(connectRaf); connectRaf = null; }
+
+/* Cena ambiente sutil atrás do app (opcional, configurável) */
+let ambScene, ambCamera, ambRenderer, ambRaf, ambMeshes = [];
+function startAmbientScene(){
+  if(ambRaf) return;
+  safeThree(()=>{
+    const canvas = document.getElementById('ambientCanvas');
+    if(!canvas) return;
+    ambScene = new THREE.Scene();
+    ambCamera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, .1, 100);
+    ambCamera.position.set(0,0,12);
+    ambRenderer = new THREE.WebGLRenderer({ canvas, antialias:true, alpha:true });
+    ambRenderer.setPixelRatio(Math.min(devicePixelRatio,1.6));
+    ambRenderer.setSize(window.innerWidth, window.innerHeight);
+    ambScene.add(new THREE.AmbientLight(0xffffff,.6));
+    const l1 = new THREE.PointLight(0x6C5CE7, 1.4, 40); l1.position.set(10,6,8); ambScene.add(l1);
+    ambMeshes = [];
+    const colorsHex = [0x6C5CE7,0x22D3EE,0xF5A623];
+    for(let i=0;i<4;i++){
+      const geo = pickGeometry(i);
+      const mat = new THREE.MeshStandardMaterial({ color:colorsHex[i%colorsHex.length], metalness:.3, roughness:.5, transparent:true, opacity:.12, flatShading:true });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set((Math.random()-.5)*20, (Math.random()-.5)*12, -6-Math.random()*6);
+      const s = 1.4+Math.random()*1.6; mesh.scale.set(s,s,s);
+      mesh.userData.spin = { x:(Math.random()-.5)*.003, y:(Math.random()-.5)*.004 };
+      ambScene.add(mesh); ambMeshes.push(mesh);
+    }
+    function animate(){
+      ambRaf = requestAnimationFrame(animate);
+      ambMeshes.forEach(m=>{ m.rotation.x += m.userData.spin.x; m.rotation.y += m.userData.spin.y; });
+      ambRenderer.render(ambScene, ambCamera);
+    }
+    animate();
+    window.addEventListener('resize', ()=>{
+      if(!ambRenderer) return;
+      ambCamera.aspect = window.innerWidth/window.innerHeight;
+      ambCamera.updateProjectionMatrix();
+      ambRenderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  });
+}
+function stopAmbientScene(){ if(ambRaf) cancelAnimationFrame(ambRaf); ambRaf = null; }
+
+/* Mini cena reutilizável (marca 3D, ícone do modal) */
+function initMiniScene(containerId, colorHex, seed){
+  safeThree(()=>{
+    const container = document.getElementById(containerId);
+    if(!container) return;
+    if(miniScenes[containerId]){ cancelAnimationFrame(miniScenes[containerId].raf); container.innerHTML = ''; }
+    const w = container.clientWidth || 56, h = container.clientHeight || 56;
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, w/h, .1, 20);
+    camera.position.z = 3.2;
+    const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.setSize(w,h);
+    container.appendChild(renderer.domElement);
+    scene.add(new THREE.AmbientLight(0xffffff,.8));
+    const light = new THREE.PointLight(0xffffff, 1.6, 15); light.position.set(2,2,3); scene.add(light);
+    const geo = pickGeometry(seed);
+    const mesh = new THREE.Mesh(geo, makeMaterial(colorHex));
+    mesh.scale.set(1.15,1.15,1.15);
+    scene.add(mesh);
+    let raf;
+    function animate(){ raf = requestAnimationFrame(animate); mesh.rotation.x += .012; mesh.rotation.y += .017; renderer.render(scene, camera); }
+    animate();
+    miniScenes[containerId] = { renderer, raf };
+  });
+}
+function destroyMiniScene(containerId){
+  if(miniScenes[containerId]){ cancelAnimationFrame(miniScenes[containerId].raf); delete miniScenes[containerId]; }
+}
+
+/* ---------------- Google Identity Services ---------------- */
+function onGsiLoaded(){
+  if(!GOOGLE_CLIENT_ID) return;
+  tokenClient = google.accounts.oauth2.initTokenClient({ client_id: GOOGLE_CLIENT_ID, scope: SCOPES, callback: handleTokenResponse });
+}
+function startLogin(){
+  if(!GOOGLE_CLIENT_ID || !tokenClient){
+    document.getElementById('statusLine').textContent = 'Nenhum Client ID configurado — use "Ver com dados de exemplo" ou configure o app (veja instruções).';
+    return;
+  }
+  document.getElementById('statusLine').textContent = 'Abrindo seletor de conta do Google...';
+  tokenClient.requestAccessToken({ prompt: 'select_account consent' });
+}
+async function handleTokenResponse(resp){
+  if(resp.error){ document.getElementById('statusLine').textContent = 'Não foi possível conectar: ' + resp.error; return; }
+  const token = resp.access_token;
+  try{
+    const profile = await fetchJSON('https://www.googleapis.com/oauth2/v3/userinfo', token);
+    const email = profile.email;
+    accounts[email] = { email, name: profile.name, picture: profile.picture, token, courses: [], tasks: [], loaded:false };
+    activeEmail = email;
+    demoMode = false;
+    showApp();
+    await loadClassroomData(email);
+    startAutoSync();
+  }catch(e){ document.getElementById('statusLine').textContent = 'Erro ao buscar perfil da conta.'; }
+}
+function addAccount(){
+  if(demoMode){ toast('No modo demonstração não é possível adicionar contas reais.', 'flask'); return; }
+  tokenClient.requestAccessToken({ prompt: 'select_account consent' });
+}
+function logoutAccount(email, ev){
+  if(ev) ev.stopPropagation();
+  const acc = accounts[email];
+  if(acc && acc.token && window.google){ google.accounts.oauth2.revoke(acc.token, ()=>{}); }
+  delete accounts[email];
+  if(activeEmail === email){ const remaining = Object.keys(accounts); activeEmail = remaining.length ? remaining[0] : null; }
+  if(!activeEmail){
+    document.getElementById('app').classList.remove('visible');
+    document.getElementById('connectScreen').style.display = 'flex';
+    stopAutoSync();
+  } else { render(); }
+}
+
+/* ---------------- Chamadas reais à Classroom API ---------------- */
+async function fetchJSON(url, token, opts){
+  const res = await fetch(url, Object.assign({ headers: { Authorization: `Bearer ${token}` } }, opts||{}));
+  if(!res.ok) throw new Error('Falha na chamada: ' + url);
+  if(res.status === 204) return {};
+  return res.json();
+}
+
+async function loadClassroomData(email, silent){
+  const acc = accounts[email];
+  if(!silent) setLoading(true);
+  try{
+    const coursesRes = await fetchJSON('https://classroom.googleapis.com/v1/courses?studentId=me&courseStates=ACTIVE&pageSize=100', acc.token);
+    const courseList = (coursesRes.courses || []).map((c,i)=>({ id: c.id, name: c.name, color: PALETTE[i % PALETTE.length] }));
+    let allTasks = [];
+    for(const course of courseList){
+      const [workRes, subRes] = await Promise.all([
+        fetchJSON(`https://classroom.googleapis.com/v1/courses/${course.id}/courseWork?pageSize=100`, acc.token).catch(()=>({courseWork:[]})),
+        fetchJSON(`https://classroom.googleapis.com/v1/courses/${course.id}/courseWork/-/studentSubmissions?userId=me&pageSize=100`, acc.token).catch(()=>({studentSubmissions:[]}))
+      ]);
+      const subsByWork = {};
+      (subRes.studentSubmissions || []).forEach(s => subsByWork[s.courseWorkId] = s);
+      (workRes.courseWork || []).forEach(cw=>{
+        let due = null;
+        if(cw.dueDate){ due = new Date(cw.dueDate.year, cw.dueDate.month - 1, cw.dueDate.day, cw.dueTime ? cw.dueTime.hours || 0 : 23, cw.dueTime ? cw.dueTime.minutes || 59 : 59); }
+        const sub = subsByWork[cw.id];
+        const state = sub ? sub.state : null;
+        allTasks.push({
+          id: cw.id, courseId: course.id, title: cw.title, description: cw.description || '',
+          due, points: cw.maxPoints || null, link: cw.alternateLink, submissionId: sub ? sub.id : null,
+          done: state === 'TURNED_IN' || state === 'RETURNED'
+        });
+      });
+    }
+    acc.courses = courseList;
+    acc.tasks = allTasks;
+    acc.loaded = true;
+    mergeExtras(acc);
+  }catch(e){
+    if(!silent) toast('Não foi possível carregar dados reais do Classroom. Verifique as permissões e a API ativada.', 'bell');
+  }
+  if(!silent) setLoading(false);
+  render();
+}
+
+async function refreshActive(){
+  if(!activeEmail || demoMode) { toast('Ative uma conta real para atualizar os dados.', 'bell'); return; }
+  const btn = document.getElementById('refreshBtn');
+  btn.classList.add('spinning');
+  await loadClassroomData(activeEmail);
+  btn.classList.remove('spinning');
+  toast('Dados atualizados.', 'check');
+}
+
+function startAutoSync(){
+  stopAutoSync();
+  autoSyncTimer = setInterval(()=>{ if(activeEmail && !demoMode) loadClassroomData(activeEmail, true); }, 5*60*1000);
+}
+function stopAutoSync(){ if(autoSyncTimer) clearInterval(autoSyncTimer); autoSyncTimer = null; }
+function startClock(){ if(clockTimer) return; clockTimer = setInterval(()=> render(), 60*1000); }
+
+/* ---------------- Pendências fixadas + pendências criadas manualmente/por IA ---------------- */
+function pinsKey(email){ return 'classeazy_pins_' + email; }
+function loadPins(email){ try{ return JSON.parse(localStorage.getItem(pinsKey(email)) || '[]'); }catch(e){ return []; } }
+function savePins(email, ids){ try{ localStorage.setItem(pinsKey(email), JSON.stringify(ids)); }catch(e){} }
+
+function customKey(email){ return 'classeazy_custom_' + email; }
+function loadCustom(email){ try{ return JSON.parse(localStorage.getItem(customKey(email)) || '[]'); }catch(e){ return []; } }
+function saveCustom(email, arr){ try{ localStorage.setItem(customKey(email), JSON.stringify(arr)); }catch(e){} }
+
+function mergeExtras(acc){
+  const pins = loadPins(acc.email);
+  acc.tasks.forEach(t => { t.pinned = pins.includes(String(t.id)); });
+  const customRaw = loadCustom(acc.email);
+  const custom = customRaw.map(c => Object.assign({}, c, { due: c.due ? new Date(c.due) : null, pinned: pins.includes(String(c.id)) }));
+  // remove custom duplicados de reloads anteriores, então concatena
+  acc.tasks = acc.tasks.filter(t => !String(t.id).startsWith('custom-')).concat(custom);
+}
+
+function togglePin(id, ev){
+  if(ev) ev.stopPropagation();
+  const acc = activeAccount(); if(!acc) return;
+  const t = acc.tasks.find(t=>String(t.id)===String(id));
+  if(!t) return;
+  t.pinned = !t.pinned;
+  const pins = loadPins(acc.email);
+  const idx = pins.indexOf(String(id));
+  if(t.pinned && idx===-1) pins.push(String(id));
+  if(!t.pinned && idx!==-1) pins.splice(idx,1);
+  savePins(acc.email, pins);
+  toast(t.pinned ? 'Pendência fixada.' : 'Pendência desafixada.', 'pin');
+  render();
+}
+
+function addCustomTask(data){
+  const acc = activeAccount(); if(!acc) return;
+  const id = 'custom-' + Date.now();
+  const task = {
+    id, courseId: data.courseId || null, title: data.title, description: data.description || '',
+    due: data.due ? data.due.toISOString() : null, points: data.points || null, link: null,
+    submissionId: null, done: false, custom: true
+  };
+  const list = loadCustom(acc.email); list.push(task); saveCustom(acc.email, list);
+  acc.tasks.push(Object.assign({}, task, { due: data.due || null }));
+  toast('Pendência adicionada.', 'check');
+  render();
+}
+
+function deleteCustomTask(id){
+  const acc = activeAccount(); if(!acc) return;
+  const list = loadCustom(acc.email).filter(t => t.id !== id);
+  saveCustom(acc.email, list);
+  acc.tasks = acc.tasks.filter(t => t.id !== id);
+  closeTaskModal();
+  toast('Pendência removida.', 'trash');
+  render();
+}
+
+/* ---------------- Entregar / enviar atividade (com anexo) ---------------- */
+function pickAttachment(){
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.onchange = () => {
+    if(input.files[0]){
+      modalAttachment = input.files[0];
+      renderAttachRow();
+    }
+  };
+  input.click();
+}
+function clearAttachment(){ modalAttachment = null; renderAttachRow(); }
+function renderAttachRow(){
+  const row = document.getElementById('attachRow');
+  if(!row) return;
+  if(modalAttachment){
+    row.innerHTML = `<div class="attach-chip"><svg class="icon" viewBox="0 0 24 24"><use href="#i-paperclip"/></svg>
+      ${escapeHtml(modalAttachment.name)} <button onclick="clearAttachment()"><svg class="icon" viewBox="0 0 24 24" width="13" height="13"><use href="#i-close"/></svg></button></div>`;
+  } else {
+    row.innerHTML = `<button class="attach-btn" onclick="pickAttachment()"><svg class="icon" viewBox="0 0 24 24"><use href="#i-paperclip"/></svg> Anexar arquivo da entrega (opcional)</button>`;
+  }
+}
+
+async function submitTask(id){
+  const acc = activeAccount();
+  const t = acc.tasks.find(t=>t.id===id);
+  if(!t) return;
+  const btn = document.getElementById('modalActionBtn');
+  if(btn){ btn.disabled = true; btn.innerHTML = '<svg class="icon spin-icon" viewBox="0 0 24 24"><use href="#i-refresh"/></svg> Enviando...'; }
+  if(modalAttachment){ t.attachment = { name: modalAttachment.name, size: modalAttachment.size }; }
+
+  if(demoMode || !t.submissionId || t.custom){
+    await new Promise(r=>setTimeout(r, 700));
+    t.done = true;
+    toast('Pendência enviada e marcada como entregue.', 'check');
+    modalAttachment = null;
+    closeTaskModal();
+    render();
+    return;
+  }
+  try{
+    await fetchJSON(`https://classroom.googleapis.com/v1/courses/${t.courseId}/courseWork/${t.id}/studentSubmissions/${t.submissionId}:turnIn`, acc.token, { method:'POST' });
+    t.done = true;
+    toast('Atividade entregue no Google Classroom.', 'check');
+    modalAttachment = null;
+    closeTaskModal();
+    render();
+  }catch(e){
+    t.done = true;
+    toast('Não foi possível confirmar no Classroom, mas marcamos como entregue por aqui.', 'bell');
+    modalAttachment = null;
+    closeTaskModal();
+    render();
+  }
+}
+
+function toggleDone(id, ev){
+  if(ev) ev.stopPropagation();
+  const acc = activeAccount();
+  const t = acc.tasks.find(t=>t.id===id);
+  const el = document.getElementById('task-'+id);
+  if(el) el.classList.add('removing');
+  setTimeout(()=>{ t.done = !t.done; render(); }, 220);
+}
+function setCourse(id){ activeCourse = id; setView('dashboard'); render(); }
+function toggleCourseList(){
+  document.getElementById('courseList').classList.toggle('open');
+  document.getElementById('courseChev').classList.toggle('open');
+}
+
+/* ---------------- Navegação entre views ---------------- */
+function setView(name){
+  currentView = name;
+  ['dashboard','pinned','calendar','settings'].forEach(v=>{
+    const el = document.getElementById('view'+v.charAt(0).toUpperCase()+v.slice(1));
+    if(el) el.style.display = (v===name) ? '' : 'none';
+  });
+  ['navHome','navPinned','navCalendar','navSettings'].forEach(id=>{
+    const map = { navHome:'dashboard', navPinned:'pinned', navCalendar:'calendar', navSettings:'settings' };
+    document.getElementById(id).classList.toggle('active', map[id]===name);
+  });
+  if(name==='pinned') renderPinnedView();
+  if(name==='calendar') renderCalendarView();
+  if(name==='settings') renderSettingsView();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function setBoardMode(mode){
+  boardMode = mode;
+  document.getElementById('viewBtnList').classList.toggle('active', mode==='list');
+  document.getElementById('viewBtnBoard').classList.toggle('active', mode==='board');
+  render();
+}
+
+/* ---------------- helpers de UI ---------------- */
+function showApp(){
+  document.getElementById('connectScreen').style.display = 'none';
+  document.getElementById('app').classList.add('visible');
+  document.getElementById('demoBanner').style.display = demoMode ? 'flex' : 'none';
+  destroyConnectScene();
+  startClock();
+  initMiniScene('markSidebar', settings.accent, 1);
+  applySettings();
+  setView('dashboard');
+}
+
+function setLoading(isLoading){
+  if(isLoading){
+    document.getElementById('taskContainer').innerHTML = '<div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div>';
+    document.getElementById('heroSubtitle').textContent = 'Sincronizando com o Google Classroom...';
+  }
+}
+
+let toastTimer = null;
+function toast(msg, icon){
+  clearTimeout(toastTimer);
+  let el = document.getElementById('toastEl');
+  if(!el){ el = document.createElement('div'); el.id='toastEl'; el.className='toast'; document.body.appendChild(el); }
+  el.innerHTML = `<svg class="icon" viewBox="0 0 24 24"><use href="#i-${icon||'sparkle'}"/></svg><span>${escapeHtml(msg)}</span>`;
+  el.style.display = 'flex';
+  toastTimer = setTimeout(()=> el.style.display='none', 3800);
+}
+
+function initialsOf(name){ return (name || '?').split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join(''); }
+function escapeHtml(str){ return (str||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+/* ---------------- Modo demonstração ---------------- */
+function startDemo(){
+  demoMode = true;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const addDays = n => { const d = new Date(today); d.setDate(d.getDate()+n); return d; };
+  const courses = [
+    { id:'c1', name:'Matemática', color:'#6C5CE7' },
+    { id:'c2', name:'História', color:'#F5A623' },
+    { id:'c3', name:'Programação', color:'#1FAE7A' },
+    { id:'c4', name:'Química', color:'#EF5D5D' },
+  ];
+  const tasks = [
+    { id:1, courseId:'c1', title:'Lista de exercícios — Funções quadráticas', description:'Resolva os exercícios 1 a 12 da apostila, mostrando o desenvolvimento de cada equação.', due:addDays(-2), done:false, points:10, link:'#', submissionId:'s1' },
+    { id:2, courseId:'c3', title:'Entregar projeto final da API', description:'Suba o repositório final com README explicando os endpoints implementados.', due:addDays(-1), done:false, points:20, link:'#', submissionId:'s2' },
+    { id:3, courseId:'c2', title:'Resumo do capítulo 7 — Revolução Industrial', description:'Resumo de até 2 páginas destacando causas e consequências sociais.', due:addDays(0), done:false, points:10, link:'#', submissionId:'s3' },
+    { id:4, courseId:'c4', title:'Relatório do experimento de titulação', description:'Inclua tabela de dados, cálculos e conclusão sobre a concentração encontrada.', due:addDays(0), done:false, points:15, link:'#', submissionId:'s4' },
+    { id:5, courseId:'c1', title:'Quiz — Trigonometria básica', description:'Quiz rápido de 10 questões sobre seno, cosseno e tangente.', due:addDays(1), done:false, points:5, link:'#', submissionId:'s5' },
+    { id:6, courseId:'c3', title:'Revisão de código dos colegas', description:'Comente ao menos 2 pull requests da turma até a data limite.', due:addDays(2), done:false, points:10, link:'#', submissionId:'s6' },
+    { id:7, courseId:'c2', title:'Ler texto sobre a Guerra Fria', description:'Leitura complementar disponível no material da turma.', due:addDays(4), done:false, points:null, link:'#', submissionId:'s7' },
+    { id:8, courseId:'c4', title:'Slides — Tabela periódica', description:'Monte uma apresentação de 6 slides sobre um grupo de elementos.', due:addDays(6), done:false, points:10, link:'#', submissionId:'s8' },
+    { id:9, courseId:'c1', title:'Prova bimestral — Geometria', description:'Avaliação presencial cobrindo áreas, perímetros e sólidos geométricos.', due:addDays(9), done:false, points:30, link:'#', submissionId:'s9' },
+    { id:10, courseId:'c3', title:'Configurar ambiente do módulo', description:'Instale as dependências indicadas no guia de setup do curso.', due:addDays(-5), done:true, points:5, link:'#', submissionId:'s10' },
+    { id:11, courseId:'c2', title:'Fichamento do artigo indicado', description:'Fichamento com ideias centrais e uma reflexão pessoal.', due:addDays(-3), done:true, points:10, link:'#', submissionId:'s11' },
+  ];
+  accounts['demo@exemplo.com'] = { email:'demo@exemplo.com', name:'Convidado(a)', picture:null, token:null, courses, tasks, loaded:true };
+  activeEmail = 'demo@exemplo.com';
+  mergeExtras(accounts['demo@exemplo.com']);
+  showApp();
+  render();
+}
+
+/* ---------------- lógica de tarefas ---------------- */
+function activeAccount(){ return accounts[activeEmail]; }
+function courseById(id){ return (activeAccount()?.courses || []).find(c=>c.id===id); }
+function daysDiff(d){ const t = new Date(); t.setHours(0,0,0,0); return d ? Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate()) - t) / 86400000) : null; }
+
+function urgencyOf(t){
+  if(t.done) return 'done';
+  if(!t.due) return 'none';
+  const diff = daysDiff(t.due);
+  if(diff < 0) return 'overdue';
+  if(diff === 0) return 'today';
+  if(diff <= 3) return 'soon';
+  return 'later';
+}
+function dueLabel(t){
+  if(t.done) return 'entregue';
+  if(!t.due) return 'sem prazo';
+  const diff = daysDiff(t.due);
+  if(diff < 0) return `${Math.abs(diff)}d atrasada`;
+  if(diff === 0) return 'vence hoje';
+  if(diff === 1) return 'amanhã';
+  return `em ${diff}d`;
+}
+function dueLong(t){
+  if(!t.due) return 'Sem prazo definido';
+  return t.due.toLocaleDateString('pt-BR', { weekday:'short', day:'numeric', month:'long' }) + ' às ' + t.due.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' });
+}
+
+/* ---------------- render ---------------- */
+function renderAccounts(){
+  const row = document.getElementById('accountRow');
+  let html = '';
+  Object.values(accounts).forEach(acc=>{
+    const isActive = acc.email === activeEmail;
+    html += `<div class="avatar-chip ${isActive?'active':''}" title="${acc.email}" onclick="activeEmail='${acc.email}';activeCourse='all';render()">
+      ${acc.picture ? `<img src="${acc.picture}">` : `<div class="initials">${initialsOf(acc.name)}</div>`}
+      <div class="remove" onclick="logoutAccount('${acc.email}', event)"><svg class="icon" viewBox="0 0 24 24"><use href="#i-close"/></svg></div>
+    </div>`;
+  });
+  html += `<div class="avatar-chip add" title="Adicionar conta" onclick="addAccount()"><svg class="icon" viewBox="0 0 24 24" width="15" height="15"><use href="#i-plus"/></svg></div>`;
+  row.innerHTML = html;
+  const acc = activeAccount();
+  document.getElementById('activeName').innerHTML = acc ? `<b>${escapeHtml(acc.name)}</b>${escapeHtml(acc.email)}` : '';
+}
+
+function renderSidebarCourses(){
+  const acc = activeAccount();
+  const list = document.getElementById('courseList');
+  if(!acc){ list.innerHTML=''; return; }
+  const counts = {};
+  acc.courses.forEach(c => counts[c.id] = acc.tasks.filter(t=>t.courseId===c.id && !t.done).length);
+  let html = `<li class="course-item ${activeCourse==='all'?'active':''}" onclick="setCourse('all')">
+      <span class="dot" style="background:#8890C2"></span> Todas <span class="count">${acc.tasks.filter(t=>!t.done).length}</span></li>`;
+  acc.courses.forEach(c=>{
+    html += `<li class="course-item ${activeCourse===c.id?'active':''}" onclick="setCourse('${c.id}')">
+      <span class="dot" style="background:${c.color}"></span> ${escapeHtml(c.name)} <span class="count">${counts[c.id]}</span></li>`;
+  });
+  list.innerHTML = html;
+}
+
+function taskHTML(t, idx){
+  const c = courseById(t.courseId);
+  const urgency = urgencyOf(t);
+  return `
+    <div class="task ${urgency} ${t.done?'done':''} ${t.pinned?'pinned':''}" id="task-${t.id}" style="animation-delay:${Math.min(idx*35,400)}ms" onclick="openTaskModal('${t.id}')">
+      <div class="check ${t.done?'checked':''}" onclick="toggleDone('${t.id}', event)">
+        <svg class="icon" viewBox="0 0 24 24"><use href="#i-check"/></svg>
+      </div>
+      <div class="task-body">
+        <div class="task-title-row">${t.pinned?`<svg class="icon pin-flag" viewBox="0 0 24 24"><use href="#i-pin"/></svg>`:''}<p class="task-title">${escapeHtml(t.title)}</p></div>
+        <div class="task-meta">
+          <span class="course-chip"><span class="dot" style="background:${c ? c.color : '#999'}"></span>${c ? escapeHtml(c.name) : (t.custom ? 'Pendência própria' : '')}</span>
+          ${t.points ? `<span class="points">· ${t.points} pts</span>` : ''}
+          ${t.done ? `<span class="submitted-tag"><svg class="icon" viewBox="0 0 24 24"><use href="#i-check"/></svg> entregue</span>` : ''}
+          ${t.attachment ? `<span class="attach-tag"><svg class="icon" viewBox="0 0 24 24"><use href="#i-paperclip"/></svg>${escapeHtml(t.attachment.name)}</span>` : ''}
+        </div>
+      </div>
+      <div class="task-side">
+        <button class="pin-btn ${t.pinned?'active':''}" onclick="togglePin('${t.id}', event)" title="Fixar"><svg class="icon" viewBox="0 0 24 24"><use href="#i-pin"/></svg></button>
+        <span class="due-pill ${urgency}">${dueLabel(t)}</span>
+      </div>
+    </div>`;
+}
+
+function filteredSortedTasks(acc){
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const sortBy = document.getElementById('sortSelect').value;
+  let list = acc.tasks.filter(t => activeCourse==='all' || t.courseId===activeCourse);
+  if(search) list = list.filter(t => t.title.toLowerCase().includes(search));
+  list = list.slice().sort((a,b)=>{
+    if(sortBy==='title') return a.title.localeCompare(b.title);
+    if(sortBy==='course') return (courseById(a.courseId)?.name||'').localeCompare(courseById(b.courseId)?.name||'');
+    const da = a.due ? a.due.getTime() : Infinity, db = b.due ? b.due.getTime() : Infinity;
+    return da - db;
+  });
+  return list;
+}
+
+function render(){
+  renderAccounts();
+  renderSidebarCourses();
+  const acc = activeAccount();
+  document.getElementById('demoBanner').style.display = demoMode ? 'flex' : 'none';
+  if(!acc) return;
+
+  const pendingTotal = acc.tasks.filter(t=>!t.done).length;
+  document.getElementById('heroTitle').textContent = pendingTotal
+    ? `Você tem ${pendingTotal} atividade${pendingTotal>1?'s':''} pendente${pendingTotal>1?'s':''}`
+    : 'Tudo em dia por aqui';
+  document.getElementById('heroSubtitle').innerHTML = demoMode
+    ? 'Exibindo dados de exemplo.'
+    : `<span class="live-dot"></span> Sincronizado com ${escapeHtml(acc.email)}`;
+
+  const overdue = acc.tasks.filter(t=>!t.done && t.due && daysDiff(t.due)<0).length;
+  const today = acc.tasks.filter(t=>!t.done && t.due && daysDiff(t.due)===0).length;
+  const done = acc.tasks.filter(t=>t.done).length;
+  const pinned = acc.tasks.filter(t=>t.pinned && !t.done).length;
+  document.getElementById('statOverdue').textContent = overdue;
+  document.getElementById('statToday').textContent = today;
+  document.getElementById('statPending').textContent = pendingTotal;
+  document.getElementById('statDone').textContent = done;
+  document.getElementById('statPinned').textContent = pinned;
+  document.getElementById('pinnedCount').textContent = pinned;
+
+  renderWeekStrip(acc);
+  renderBell(acc);
+
+  const list = filteredSortedTasks(acc);
+  const container = document.getElementById('taskContainer');
+
+  if(boardMode === 'board'){
+    const cols = [
+      { key:'overdue', label:'Atrasadas', color:'var(--coral)' },
+      { key:'today', label:'Hoje', color:'var(--amber)' },
+      { key:'soon', label:'Em breve', color:'var(--accent)' },
+      { key:'done', label:'Concluídas', color:'var(--mint)' },
+    ];
+    let html = '<div class="board">';
+    cols.forEach(col=>{
+      const items = list.filter(t => {
+        const u = urgencyOf(t);
+        if(col.key==='soon') return u==='soon' || u==='later' || u==='none';
+        return u===col.key;
+      });
+      html += `<div class="board-col"><h4><span class="dot" style="background:${col.color}"></span>${col.label} <span class="count mono" style="margin-left:auto;color:var(--ink-faint)">${items.length}</span></h4>`;
+      html += items.length ? items.map((t,i)=>taskHTML(t,i)).join('') : '<p style="font-size:12px;color:var(--ink-faint);padding:6px;">Nada aqui.</p>';
+      html += '</div>';
+    });
+    html += '</div>';
+    container.innerHTML = html;
+  } else {
+    if(!list.length){
+      container.innerHTML = `<div class="empty"><svg class="icon" viewBox="0 0 24 24"><use href="#i-sparkle"/></svg><b>Nada por aqui</b>Ajuste os filtros ou aproveite o tempo livre.</div>`;
+    } else {
+      const groups = [
+        { key:'overdue', label:'Atrasadas', icon:'flag' },
+        { key:'today', label:'Vencem hoje', icon:'clock' },
+        { key:'soon', label:'Próximos dias', icon:'calendar' },
+        { key:'later', label:'Mais adiante', icon:'calendar' },
+        { key:'none', label:'Sem prazo', icon:'note' },
+        { key:'done', label:'Concluídas', icon:'check' },
+      ];
+      let html = '';
+      groups.forEach(g=>{
+        const items = list.filter(t => urgencyOf(t)===g.key);
+        if(!items.length) return;
+        html += `<h2 class="group-title"><svg class="icon" viewBox="0 0 24 24"><use href="#i-${g.icon}"/></svg>${g.label} <span class="badge">${items.length}</span></h2>`;
+        html += `<div class="spine">${items.map((t,i)=>taskHTML(t,i)).join('')}</div>`;
+      });
+      container.innerHTML = html;
+    }
+  }
+
+  if(currentModalTaskId){
+    const stillExists = acc.tasks.find(t=>t.id===currentModalTaskId);
+    if(stillExists) renderTaskModalContent(stillExists); else closeTaskModal();
+  }
+}
+
+function renderWeekStrip(acc){
+  const strip = document.getElementById('weekStrip');
+  if(!strip) return;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const wd = ['dom','seg','ter','qua','qui','sex','sáb'];
+  let html = '';
+  for(let i=0;i<7;i++){
+    const d = new Date(today); d.setDate(d.getDate()+i);
+    const count = acc.tasks.filter(t=>!t.done && t.due && new Date(t.due.getFullYear(),t.due.getMonth(),t.due.getDate()).getTime()===d.getTime()).length;
+    html += `<div class="week-day ${i===0?'today':''}" onclick="quickFilterDay(${i})">
+      <div class="wd">${i===0?'hoje':wd[d.getDay()]}</div>
+      <div class="dn">${d.getDate()}</div>
+      <div class="wc ${count===0?'zero':''}">${count?count+' pend.':'livre'}</div>
+    </div>`;
+  }
+  strip.innerHTML = html;
+}
+function quickFilterDay(offset){
+  const acc = activeAccount(); if(!acc) return;
+  toast(offset===0 ? 'Mostrando o painel de hoje.' : `Veja o calendário para o dia +${offset}.`, 'calendar');
+  if(offset===0){ setView('dashboard'); } else { setView('calendar'); }
+}
+
+function renderBell(acc){
+  const urgent = acc.tasks.filter(t=>!t.done && t.due && daysDiff(t.due)<=0).sort((a,b)=>a.due-b.due);
+  const badge = document.getElementById('bellBadge');
+  if(urgent.length){ badge.style.display='flex'; badge.textContent = urgent.length; } else { badge.style.display='none'; }
+  const dd = document.getElementById('bellDropdown');
+  if(!urgent.length){
+    dd.innerHTML = `<h4>Avisos</h4><div class="bell-empty">Nenhuma pendência urgente. Bom trabalho!</div>`;
+    return;
+  }
+  let html = '<h4>Avisos</h4>';
+  urgent.forEach(t=>{
+    const c = courseById(t.courseId);
+    html += `<div class="bell-item" onclick="openTaskModal('${t.id}');toggleBell()"><div class="t">${escapeHtml(t.title)}</div><div class="m">${c?escapeHtml(c.name)+' · ':''}${dueLabel(t)}</div></div>`;
+  });
+  dd.innerHTML = html;
+}
+function toggleBell(ev){
+  if(ev) ev.stopPropagation();
+  document.getElementById('bellDropdown').classList.toggle('open');
+}
+document.addEventListener('click', (e)=>{
+  const dd = document.getElementById('bellDropdown');
+  if(dd && !e.target.closest('.bell-wrap')) dd.classList.remove('open');
+});
+
+/* ---------------- VIEW: Fixados ---------------- */
+function renderPinnedView(){
+  const acc = activeAccount();
+  const container = document.getElementById('pinnedContainer');
+  if(!acc){ container.innerHTML=''; return; }
+  const items = acc.tasks.filter(t=>t.pinned);
+  if(!items.length){
+    container.innerHTML = `<div class="empty"><svg class="icon" viewBox="0 0 24 24"><use href="#i-pin"/></svg><b>Nenhuma pendência fixada</b>Toque no alfinete de uma atividade para mantê-la sempre à vista aqui.</div>`;
+    return;
+  }
+  container.innerHTML = `<div class="spine">${items.map((t,i)=>taskHTML(t,i)).join('')}</div>`;
+}
+
+/* ---------------- VIEW: Calendário ---------------- */
+function renderCalendarView(){
+  const acc = activeAccount();
+  const container = document.getElementById('calendarContainer');
+  if(!acc){ container.innerHTML=''; return; }
+  const today = new Date(); today.setHours(0,0,0,0);
+  let html = '';
+  for(let i=0;i<14;i++){
+    const d = new Date(today); d.setDate(d.getDate()+i);
+    const items = acc.tasks.filter(t=>!t.done && t.due && new Date(t.due.getFullYear(),t.due.getMonth(),t.due.getDate()).getTime()===d.getTime());
+    html += `<h2 class="group-title"><svg class="icon" viewBox="0 0 24 24"><use href="#i-calendar"/></svg>${d.toLocaleDateString('pt-BR',{weekday:'long', day:'numeric', month:'long'})} ${i===0?'<span class="badge">hoje</span>':''}</h2>`;
+    html += items.length ? `<div class="spine">${items.map((t,idx)=>taskHTML(t,idx)).join('')}</div>` : `<p style="font-size:12.5px;color:var(--ink-faint);margin:0 0 16px;">Nada programado.</p>`;
+  }
+  container.innerHTML = html;
+}
+
+/* ================================================================
+   MODAL DE DETALHES DA ATIVIDADE
+   ================================================================ */
+function openTaskModal(id){
+  const acc = activeAccount();
+  const t = acc.tasks.find(t=>String(t.id)===String(id));
+  if(!t) return;
+  currentModalTaskId = t.id;
+  modalAttachment = null;
+  renderTaskModalContent(t);
+  const backdrop = document.getElementById('taskModal');
+  backdrop.style.display = 'flex';
+  requestAnimationFrame(()=> backdrop.classList.add('open'));
+}
+function closeTaskModal(){
+  const backdrop = document.getElementById('taskModal');
+  backdrop.classList.remove('open');
+  destroyMiniScene('modal3d');
+  currentModalTaskId = null;
+  setTimeout(()=>{ backdrop.style.display = 'none'; }, 250);
+}
+
+function renderTaskModalContent(t){
+  const c = courseById(t.courseId);
+  const urgency = urgencyOf(t);
+  const statusLabel = {overdue:'Atrasada', today:'Vence hoje', soon:'Em breve', later:'Programada', none:'Sem prazo', done:'Entregue'}[urgency];
+  const statusColorVar = {overdue:'var(--coral)', today:'var(--amber-ink)', soon:'var(--accent)', later:'var(--ink-soft)', none:'var(--ink-soft)', done:'var(--mint)'}[urgency];
+  const statusBg = {overdue:'var(--coral-soft)', today:'var(--amber-soft)', soon:'var(--accent-soft)', later:'var(--cloud)', none:'var(--cloud)', done:'var(--mint-soft)'}[urgency];
+
+  const card = document.getElementById('taskModalCard');
+  card.innerHTML = `
+    <div class="modal-head">
+      <div class="modal-3d" id="modal3d"></div>
+      <div class="modal-headtext">
+        <div class="course-name" style="color:${c ? c.color : 'var(--ink-soft)'}">${c ? escapeHtml(c.name) : (t.custom?'Pendência própria':'Sem turma')}</div>
+        <h3>${escapeHtml(t.title)}</h3>
+      </div>
+      <button class="modal-close" onclick="closeTaskModal()"><svg class="icon" viewBox="0 0 24 24"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="modal-badges">
+        <span class="modal-badge" style="background:${statusBg};color:${statusColorVar}">${statusLabel}</span>
+        ${t.points ? `<span class="modal-badge" style="background:var(--cloud);color:var(--ink-soft)">${t.points} pontos</span>` : ''}
+        <button class="pin-btn ${t.pinned?'active':''}" style="border:1px solid var(--line);border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:600;gap:5px;display:inline-flex;align-items:center;" onclick="togglePin('${t.id}', event)">
+          <svg class="icon" viewBox="0 0 24 24"><use href="#i-pin"/></svg> ${t.pinned?'Fixada':'Fixar'}
+        </button>
+      </div>
+      <div class="modal-grid">
+        <div class="modal-field"><label>Prazo</label><div>${dueLong(t)}</div></div>
+        <div class="modal-field"><label>Situação</label><div>${dueLabel(t)}</div></div>
+      </div>
+      <div class="modal-section">
+        <label>Descrição</label>
+        <div class="modal-desc">${t.description ? escapeHtml(t.description) : 'Sem descrição informada para esta atividade.'}</div>
+      </div>
+      <div class="modal-section modal-note">
+        <label>Sua anotação sobre esta atividade</label>
+        <textarea id="taskNoteArea" placeholder="Ex.: revisar capítulo 3 antes de entregar..." oninput="onTaskNoteInput('${t.id}')"></textarea>
+        <div class="note-saved" id="taskNoteSaved"><svg class="icon" viewBox="0 0 24 24"><use href="#i-check"/></svg> anotação salva</div>
+      </div>
+      ${!t.done ? `<div class="modal-section"><label>Enviar pendência</label><div id="attachRow"></div></div>` : ''}
+      <div class="modal-actions">
+        ${t.done
+          ? `<button class="btn-ghost" onclick="reopenTask('${t.id}')"><svg class="icon" viewBox="0 0 24 24"><use href="#i-refresh"/></svg> Reabrir atividade</button>`
+          : `<button class="btn-primary" id="modalActionBtn" onclick="submitTask('${t.id}')">
+               <svg class="icon" viewBox="0 0 24 24"><use href="#i-check"/></svg> Enviar e marcar como entregue
+             </button>`}
+        ${t.link ? `<a class="btn-link" href="${t.link}" target="_blank" rel="noopener"><svg class="icon" viewBox="0 0 24 24"><use href="#i-external"/></svg> Abrir no Classroom</a>` : ''}
+        ${t.custom ? `<button class="danger-btn" onclick="deleteCustomTask('${t.id}')"><svg class="icon" viewBox="0 0 24 24"><use href="#i-trash"/></svg> Excluir</button>` : ''}
+      </div>
+    </div>
+  `;
+  const seed = hashCode(String(t.courseId||'x'));
+  initMiniScene('modal3d', (c ? c.color : settings.accent), seed);
+  renderAttachRow();
+  const noteArea = document.getElementById('taskNoteArea');
+  noteArea.value = loadTaskNote(t.id);
+}
+
+function reopenTask(id){
+  const acc = activeAccount();
+  const t = acc.tasks.find(t=>t.id===id);
+  if(!t) return;
+  t.done = false;
+  toast('Atividade reaberta.', 'refresh');
+  render();
+}
+
+function taskNoteKey(id){ return 'classeazy_note_task_' + id; }
+function loadTaskNote(id){ try{ return localStorage.getItem(taskNoteKey(id)) || ''; }catch(e){ return ''; } }
+let noteSaveTimer = null;
+function onTaskNoteInput(id){
+  clearTimeout(noteSaveTimer);
+  const val = document.getElementById('taskNoteArea').value;
+  noteSaveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(taskNoteKey(id), val); }catch(e){}
+    const ind = document.getElementById('taskNoteSaved');
+    if(ind){ ind.classList.add('show'); setTimeout(()=>ind.classList.remove('show'), 1400); }
+  }, 500);
+}
+
+/* ================================================================
+   NOVA PENDÊNCIA — manual ou importada de arquivo com IA
+   ================================================================ */
+function openNewTaskModal(){
+  newTaskTab = 'manual'; newTaskFile = null; newTaskExtracted = null;
+  renderNewTaskModal();
+  const backdrop = document.getElementById('newTaskModal');
+  backdrop.style.display = 'flex';
+  requestAnimationFrame(()=> backdrop.classList.add('open'));
+}
+function closeNewTaskModal(){
+  const backdrop = document.getElementById('newTaskModal');
+  backdrop.classList.remove('open');
+  setTimeout(()=>{ backdrop.style.display = 'none'; }, 250);
+}
+function switchNewTaskTab(tab){ newTaskTab = tab; renderNewTaskModal(); }
+
+function courseOptionsHTML(selectedId){
+  const acc = activeAccount();
+  let html = `<option value="">Sem turma / pendência própria</option>`;
+  (acc?.courses || []).forEach(c=>{ html += `<option value="${c.id}" ${selectedId===c.id?'selected':''}>${escapeHtml(c.name)}</option>`; });
+  return html;
+}
+
+function renderNewTaskModal(){
+  const card = document.getElementById('newTaskModalCard');
+  const ex = newTaskExtracted || {};
+  card.innerHTML = `
+    <div class="modal-head">
+      <div class="modal-headtext"><h3 style="margin-top:4px;">Nova pendência</h3></div>
+      <button class="modal-close" onclick="closeNewTaskModal()"><svg class="icon" viewBox="0 0 24 24"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <div class="tabs-row">
+        <button class="tab-pill ${newTaskTab==='manual'?'active':''}" onclick="switchNewTaskTab('manual')"><svg class="icon" viewBox="0 0 24 24"><use href="#i-note"/></svg> Preencher manualmente</button>
+        <button class="tab-pill ${newTaskTab==='ai'?'active':''}" onclick="switchNewTaskTab('ai')"><svg class="icon" viewBox="0 0 24 24"><use href="#i-sparkle"/></svg> Importar de arquivo (IA)</button>
+      </div>
+
+      ${newTaskTab==='ai' ? `
+        ${!newTaskFile ? `
+          <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-upload"/></svg>
+            <b>Solte um PDF, imagem ou .txt aqui</b>
+            <span>A IA lê o enunciado e já monta a pendência para você revisar</span>
+          </div>
+          <input type="file" id="fileInput" accept=".pdf,.txt,image/*" style="display:none;" onchange="handleNewTaskFile(this.files[0])">
+        ` : `
+          <div class="file-preview-name"><svg class="icon" viewBox="0 0 24 24"><use href="#i-doc"/></svg> ${escapeHtml(newTaskFile.name)}</div>
+          <div class="ai-status" id="aiStatus"><svg class="icon spin-icon" viewBox="0 0 24 24"><use href="#i-refresh"/></svg> Lendo o arquivo e extraindo a tarefa...</div>
+        `}
+      ` : ''}
+
+      ${(newTaskTab==='manual' || (newTaskTab==='ai' && newTaskExtracted)) ? `
+        <div class="form-row">
+          <label>Título</label>
+          <input type="text" id="ntTitle" value="${escapeHtml(ex.title||'')}" placeholder="Ex.: Resumo do capítulo 5">
+        </div>
+        <div class="form-grid2">
+          <div class="form-row">
+            <label>Turma</label>
+            <select id="ntCourse">${courseOptionsHTML(ex.courseId||'')}</select>
+          </div>
+          <div class="form-row">
+            <label>Prazo</label>
+            <input type="date" id="ntDue" value="${ex.due ? ex.due.toISOString().slice(0,10) : ''}">
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Pontos (opcional)</label>
+          <input type="number" id="ntPoints" value="${ex.points||''}" placeholder="Ex.: 10">
+        </div>
+        <div class="form-row">
+          <label>Descrição</label>
+          <textarea id="ntDesc" rows="3" placeholder="Detalhes da pendência...">${escapeHtml(ex.description||'')}</textarea>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-primary" onclick="confirmNewTask()"><svg class="icon" viewBox="0 0 24 24"><use href="#i-plus"/></svg> Adicionar pendência</button>
+          <button class="btn-ghost" onclick="closeNewTaskModal()">Cancelar</button>
+        </div>
+      ` : ''}
+    </div>
+  `;
+  if(newTaskTab==='ai'){
+    const dz = document.getElementById('dropZone');
+    if(dz){
+      dz.addEventListener('dragover', e=>{ e.preventDefault(); dz.classList.add('drag'); });
+      dz.addEventListener('dragleave', ()=> dz.classList.remove('drag'));
+      dz.addEventListener('drop', e=>{ e.preventDefault(); dz.classList.remove('drag'); if(e.dataTransfer.files[0]) handleNewTaskFile(e.dataTransfer.files[0]); });
+    }
+  }
+}
+
+async function handleNewTaskFile(file){
+  if(!file) return;
+  newTaskFile = file;
+  renderNewTaskModal();
+  try{
+    const text = await extractTextFromFile(file);
+    const data = await extractTaskFromText(text, file.name);
+    newTaskExtracted = data;
+  }catch(e){
+    newTaskExtracted = { title: file.name.replace(/\.[a-z0-9]+$/i,''), description: 'Não foi possível ler o conteúdo automaticamente — revise e complete os campos.', due:null, points:null, courseId:'' };
+  }
+  renderNewTaskModal();
+}
+
+async function extractTextFromFile(file){
+  if(file.type === 'application/pdf' || /\.pdf$/i.test(file.name)){
+    if(!window.pdfjsLib) throw new Error('pdf.js indisponível');
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let text = '';
+    const maxPages = Math.min(pdf.numPages, 6);
+    for(let i=1;i<=maxPages;i++){
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(it=>it.str).join(' ') + '\n';
+    }
+    return text.slice(0, 6000);
+  }
+  if(file.type.startsWith('text/') || /\.txt$/i.test(file.name)){
+    return (await file.text()).slice(0, 6000);
+  }
+  // imagem: sem OCR embutido — usamos o nome do arquivo como pista
+  return '';
+}
+
+async function extractTaskFromText(text, filename){
+  if(GEMINI_API_KEY){
+    try{ return await aiExtractViaGemini(text, filename); }
+    catch(e){ /* cai no heurístico */ }
+  }
+  return heuristicExtractTask(text, filename);
+}
+
+async function aiExtractViaGemini(text, filename){
+  const prompt = `Extraia de um enunciado de tarefa escolar os campos em JSON puro (sem markdown, sem comentários):
+{"title": string, "description": string curta, "due": "YYYY-MM-DD" ou null, "points": number ou null}
+Nome do arquivo: ${filename}
+Conteúdo:
+${text || '(arquivo sem texto extraível, use o nome do arquivo como base)'}`;
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
+    method:'POST', headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+  });
+  if(!res.ok) throw new Error('gemini falhou');
+  const data = await res.json();
+  const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if(!raw) throw new Error('sem resposta');
+  const clean = raw.replace(/```json|```/g,'').trim();
+  const parsed = JSON.parse(clean);
+  return { title: parsed.title || filename, description: parsed.description || '', due: parsed.due ? new Date(parsed.due+'T23:59:59') : null, points: parsed.points || null, courseId:'' };
+}
+
+function heuristicExtractTask(text, filename){
+  const cleanName = filename.replace(/\.[a-z0-9]+$/i,'').replace(/[_-]+/g,' ');
+  let title = cleanName;
+  let description = '';
+  if(text){
+    const firstLine = text.split(/\n|\.\s/).map(s=>s.trim()).find(s=>s.length>8);
+    if(firstLine) title = firstLine.slice(0,90);
+    description = text.slice(0,280).trim();
+  }
+  // procura datas no formato dd/mm/yyyy ou dd de mês
+  let due = null;
+  const dm = text && text.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if(dm){
+    let [,d,m,y] = dm; y = y.length===2 ? '20'+y : y;
+    const parsed = new Date(+y, +m-1, +d, 23,59);
+    if(!isNaN(parsed)) due = parsed;
+  }
+  const pm = text && text.match(/(\d+)\s*pontos?/i);
+  const points = pm ? +pm[1] : null;
+  return { title, description: description || 'Revise o arquivo importado e complete os detalhes.', due, points, courseId:'' };
+}
+
+function confirmNewTask(){
+  const title = document.getElementById('ntTitle').value.trim();
+  if(!title){ toast('Dê um título para a pendência.', 'bell'); return; }
+  const courseId = document.getElementById('ntCourse').value || null;
+  const dueVal = document.getElementById('ntDue').value;
+  const points = +document.getElementById('ntPoints').value || null;
+  const description = document.getElementById('ntDesc').value.trim();
+  const due = dueVal ? new Date(dueVal+'T23:59:59') : null;
+  addCustomTask({ title, courseId, due, points, description });
+  closeNewTaskModal();
+}
+
+/* ================================================================
+   PAINEL LATERAL — ANOTAÇÕES GERAIS
+   ================================================================ */
+function globalNotesKey(){ return 'classeazy_notes_global_' + (activeEmail || 'guest'); }
+function loadGlobalNotes(){ try{ document.getElementById('globalNotesArea').value = localStorage.getItem(globalNotesKey()) || ''; }catch(e){} }
+let globalNoteSaveTimer = null;
+function onGlobalNotesInput(){
+  clearTimeout(globalNoteSaveTimer);
+  const val = document.getElementById('globalNotesArea').value;
+  globalNoteSaveTimer = setTimeout(()=>{
+    try{ localStorage.setItem(globalNotesKey(), val); }catch(e){}
+    const ind = document.getElementById('notesSavedIndicator');
+    if(ind){ ind.style.opacity = 1; setTimeout(()=> ind.style.opacity = 0, 1400); }
+  }, 500);
+}
+
+/* ================================================================
+   PAINEL LATERAL — CONTROLE GERAL
+   ================================================================ */
+function openPanel(tab){
+  document.getElementById('sidePanel').classList.add('open');
+  document.getElementById('panelOverlay').classList.add('open');
+  switchPanelTab(tab || 'chat');
+  if((tab||'chat') === 'notes') loadGlobalNotes();
+  if(document.getElementById('chatScroll').children.length === 0){
+    appendChatMessage('ai', 'Oi! Eu sou o assistente do ClasseAzy. Posso te ajudar a entender suas atividades, o que está atrasado, o que priorizar hoje, ou só conversar sobre como organizar seus estudos. O que você quer saber?');
+  }
+}
+function closePanel(){
+  document.getElementById('sidePanel').classList.remove('open');
+  document.getElementById('panelOverlay').classList.remove('open');
+}
+function switchPanelTab(tab){
+  currentPanelTab = tab;
+  document.getElementById('tabBtnChat').classList.toggle('active', tab==='chat');
+  document.getElementById('tabBtnNotes').classList.toggle('active', tab==='notes');
+  document.getElementById('viewChat').classList.toggle('active', tab==='chat');
+  document.getElementById('viewNotes').classList.toggle('active', tab==='notes');
+  document.getElementById('panelIcon').innerHTML = `<use href="#i-${tab==='chat'?'robot':'note'}"/>`;
+  document.getElementById('panelTitle').textContent = tab==='chat' ? 'Assistente' : 'Anotações';
+  if(tab === 'notes') loadGlobalNotes();
+}
+
+/* ================================================================
+   ASSISTENTE DE IA
+   ================================================================ */
+function appendChatMessage(role, text){
+  const scroll = document.getElementById('chatScroll');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  div.textContent = text;
+  scroll.appendChild(div);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+function showTyping(){
+  const scroll = document.getElementById('chatScroll');
+  const div = document.createElement('div');
+  div.className = 'chat-typing'; div.id = 'typingIndicator';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  scroll.appendChild(div);
+  scroll.scrollTop = scroll.scrollHeight;
+}
+function hideTyping(){ const el = document.getElementById('typingIndicator'); if(el) el.remove(); }
+function quickAsk(text){ document.getElementById('chatInput').value = text; sendAssistantMessage(); }
+
+async function sendAssistantMessage(){
+  const input = document.getElementById('chatInput');
+  const msg = input.value.trim();
+  if(!msg) return;
+  appendChatMessage('user', msg);
+  input.value = '';
+  showTyping();
+  let reply;
+  if(GEMINI_API_KEY){ reply = await callGemini(msg).catch(()=> localAssistantReply(msg)); }
+  else { await new Promise(r=>setTimeout(r, 550 + Math.random()*450)); reply = localAssistantReply(msg); }
+  hideTyping();
+  appendChatMessage('ai', reply);
+}
+
+async function callGemini(msg){
+  const acc = activeAccount();
+  const context = buildTaskContext(acc);
+  const prompt = `Você é o assistente de estudos do ClasseAzy. Responda em português, de forma curta e útil.
+Contexto das atividades do aluno:
+${context}
+
+Pergunta do aluno: ${msg}`;
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`, {
+    method:'POST', headers:{ 'Content-Type':'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+  });
+  if(!res.ok) throw new Error('gemini falhou');
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if(!text) throw new Error('sem resposta');
+  return text.trim();
+}
+
+function buildTaskContext(acc){
+  if(!acc) return 'Nenhuma conta ativa.';
+  const pending = acc.tasks.filter(t=>!t.done);
+  const lines = pending.map(t=>{
+    const c = courseById(t.courseId);
+    return `- ${t.title} (${c?c.name:'sem turma'}), prazo: ${dueLabel(t)}${t.pinned?' [fixada]':''}`;
+  });
+  return lines.length ? lines.join('\n') : 'Nenhuma atividade pendente.';
+}
+
+function localAssistantReply(rawMsg){
+  const acc = activeAccount();
+  if(!acc) return 'Conecte uma conta ou entre no modo demonstração para eu poder ver suas atividades.';
+  const msg = rawMsg.toLowerCase();
+  const pending = acc.tasks.filter(t=>!t.done);
+  const overdue = pending.filter(t=>t.due && daysDiff(t.due) < 0).sort((a,b)=>a.due-b.due);
+  const today = pending.filter(t=>t.due && daysDiff(t.due) === 0);
+  const week = pending.filter(t=>t.due && daysDiff(t.due) > 0 && daysDiff(t.due) <= 7);
+  const pinned = pending.filter(t=>t.pinned);
+
+  const fmt = list => list.map(t=>{ const c = courseById(t.courseId); return `• ${t.title} — ${c?c.name:'sem turma'} (${dueLabel(t)})`; }).join('\n');
+
+  if(/oi|olá|ola|bom dia|boa tarde|boa noite/.test(msg) && msg.length < 20){
+    return `Oi! Você tem ${pending.length} atividade${pending.length===1?'':'s'} pendente${pending.length===1?'':'s'}. Quer que eu liste o que está atrasado ou o que priorizar?`;
+  }
+  if(/atrasad/.test(msg)){
+    if(!overdue.length) return 'Nada atrasado no momento — você está em dia!';
+    return `Você tem ${overdue.length} atividade${overdue.length===1?'':'s'} atrasada${overdue.length===1?'':'s'}:\n${fmt(overdue)}\n\nRecomendo resolver a mais antiga primeiro.`;
+  }
+  if(/hoje/.test(msg)){
+    if(!today.length) return 'Nada vencendo hoje. Aproveite para adiantar algo da semana!';
+    return `Vencem hoje:\n${fmt(today)}`;
+  }
+  if(/semana|próxim|proxim/.test(msg)){
+    if(!week.length) return 'Nenhuma atividade programada para os próximos 7 dias.';
+    return `Nos próximos 7 dias:\n${fmt(week)}`;
+  }
+  if(/fixad|pin/.test(msg)){
+    if(!pinned.length) return 'Você ainda não fixou nenhuma pendência. Toque no ícone de alfinete em qualquer atividade para mantê-la sempre à vista.';
+    return `Suas pendências fixadas:\n${fmt(pinned)}`;
+  }
+  if(/priorizar|prioridade|organizar|o que fazer|por onde come/.test(msg)){
+    const ordered = [...overdue, ...today, ...week.sort((a,b)=>a.due-b.due)].slice(0,5);
+    if(!ordered.length) return 'Você está com tudo em dia — não há nada urgente para priorizar agora.';
+    return `Sugestão de ordem para você atacar primeiro:\n${fmt(ordered)}\n\nComece pelas atrasadas, depois as de hoje, e deixe as com prazo mais longo por último.`;
+  }
+  if(/quantas|quantos/.test(msg) && /pendente/.test(msg)){
+    return `Você tem ${pending.length} atividade${pending.length===1?'':'s'} pendente${pending.length===1?'':'s'} no total.`;
+  }
+  if(/entregue|entreguei|conclu/.test(msg)){
+    const done = acc.tasks.filter(t=>t.done).length;
+    return `Você já entregou ${done} atividade${done===1?'':'s'}. Bom trabalho!`;
+  }
+  const found = acc.tasks.find(t=> msg.includes(t.title.toLowerCase().split(' ').slice(0,3).join(' ')));
+  if(found){
+    const c = courseById(found.courseId);
+    return `"${found.title}" (${c?c.name:'sem turma'}) — ${dueLabel(found)}. ${found.points?`Vale ${found.points} pontos. `:''}${found.done?'Já está entregue.':'Ainda está pendente.'}`;
+  }
+  return `Posso te ajudar com suas ${pending.length} atividades pendentes. Pergunte coisas como "o que está atrasado", "o que vence hoje", "quais estão fixadas" ou "me ajude a priorizar".`;
+}
+
+/* ================================================================
+   VIEW: CONFIGURAÇÕES DE INTERFACE
+   ================================================================ */
+function renderSettingsView(){
+  const el = document.getElementById('viewSettings');
+  el.innerHTML = `
+    <div class="hero"><div><h2 class="display">Configurações</h2><p>Personalize a aparência e o comportamento do ClasseAzy.</p></div></div>
+
+    <div class="settings-preview">
+      <div class="mark3d" id="markSettings"></div>
+      <div><b>Assim fica a identidade visual</b><p>A cor de destaque e o tema se aplicam em toda a interface, incluindo os modelos 3D.</p></div>
+    </div>
+
+    <div class="settings-section">
+      <h3><svg class="icon" viewBox="0 0 24 24"><use href="#i-palette"/></svg> Aparência</h3>
+      <p>Escolha o tema e a cor de destaque do aplicativo.</p>
+      <div class="settings-row">
+        <div class="settings-row-text"><b>Tema</b><span>Claro para o dia, escuro para virar a noite estudando.</span></div>
+        <div class="pill-group">
+          <button class="pill-opt ${settings.theme==='light'?'active':''}" onclick="updateSetting('theme','light')"><svg class="icon" viewBox="0 0 24 24"><use href="#i-sun"/></svg> Claro</button>
+          <button class="pill-opt ${settings.theme==='dark'?'active':''}" onclick="updateSetting('theme','dark')"><svg class="icon" viewBox="0 0 24 24"><use href="#i-moon"/></svg> Escuro</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-text"><b>Cor de destaque</b><span>Usada em botões, links e nos modelos 3D.</span></div>
+        <div class="swatch-row">
+          ${ACCENT_SWATCHES.map(c=>`<div class="swatch ${settings.accent.toLowerCase()===c.toLowerCase()?'active':''}" style="background:${c}" onclick="updateSetting('accent','${c}')"></div>`).join('')}
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-text"><b>Densidade</b><span>Compacta cabe mais pendências na tela.</span></div>
+        <div class="pill-group">
+          <button class="pill-opt ${settings.density==='cozy'?'active':''}" onclick="updateSetting('density','cozy')">Confortável</button>
+          <button class="pill-opt ${settings.density==='compact'?'active':''}" onclick="updateSetting('density','compact')">Compacta</button>
+        </div>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-text"><b>Arredondamento dos cantos</b><span>Ajusta cartões, botões e modais.</span></div>
+        <div class="range-row" style="width:220px;">
+          <input type="range" min="4" max="26" value="${settings.radius}" oninput="updateSetting('radius', +this.value)">
+          <span class="val mono">${settings.radius}px</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3><svg class="icon" viewBox="0 0 24 24"><use href="#i-sliders"/></svg> Comportamento</h3>
+      <p>Controle animações, o fundo 3D e onde o assistente aparece.</p>
+      <div class="settings-row">
+        <div class="settings-row-text"><b>Reduzir movimento</b><span>Desliga transições e animações decorativas.</span></div>
+        <label class="switch"><input type="checkbox" ${settings.reduceMotion?'checked':''} onchange="updateSetting('reduceMotion', this.checked)"><span class="track"></span></label>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-text"><b>Fundo 3D ambiente</b><span>Formas sutis animadas atrás do painel.</span></div>
+        <label class="switch"><input type="checkbox" ${settings.ambient3d?'checked':''} onchange="updateSetting('ambient3d', this.checked)"><span class="track"></span></label>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-text"><b>Posição do assistente</b><span>Onde o botão flutuante e o painel de IA abrem.</span></div>
+        <div class="pill-group">
+          <button class="pill-opt ${settings.assistantDock==='right'?'active':''}" onclick="updateSetting('assistantDock','right')">Direita</button>
+          <button class="pill-opt ${settings.assistantDock==='left'?'active':''}" onclick="updateSetting('assistantDock','left')">Esquerda</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <h3><svg class="icon" viewBox="0 0 24 24"><use href="#i-download"/></svg> Dados</h3>
+      <p>Exporte suas pendências ou reinicie as preferências locais.</p>
+      <div class="settings-row">
+        <div class="settings-row-text"><b>Exportar pendências</b><span>Baixe um arquivo .json com tudo que está na sua lista.</span></div>
+        <button class="btn-soft" onclick="exportTasksJSON()"><svg class="icon" viewBox="0 0 24 24"><use href="#i-download"/></svg> Exportar</button>
+      </div>
+      <div class="settings-row">
+        <div class="settings-row-text"><b>Restaurar padrões da interface</b><span>Tema, cor e densidade voltam ao original.</span></div>
+        <button class="danger-btn" onclick="resetSettings()"><svg class="icon" viewBox="0 0 24 24"><use href="#i-refresh"/></svg> Restaurar</button>
+      </div>
+    </div>
+  `;
+  initMiniScene('markSettings', settings.accent, 2);
+}
+
+function updateSetting(key, val){
+  settings[key] = val;
+  saveSettings();
+  applySettings();
+  renderSettingsView();
+  render();
+}
+function resetSettings(){
+  settings = Object.assign({}, DEFAULT_SETTINGS);
+  saveSettings(); applySettings(); renderSettingsView(); render();
+  toast('Preferências restauradas.', 'refresh');
+}
+
+function exportTasksJSON(){
+  const acc = activeAccount(); if(!acc) return;
+  const blob = new Blob([JSON.stringify(acc.tasks, null, 2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'classeazy-pendencias.json'; a.click();
+  URL.revokeObjectURL(url);
+  toast('Exportação concluída.', 'download');
+}
+
+/* ================================================================
+   INICIALIZAÇÃO
+   ================================================================ */
+window.addEventListener('DOMContentLoaded', ()=>{
+  applySettings();
+  initConnectScene();
+  initMiniScene('markConnect', settings.accent, 0);
+});
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="onGsiLoaded()"></script>
+</body>
+</html>
